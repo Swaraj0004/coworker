@@ -1,0 +1,25 @@
+/* Default (Light) */
+body.light {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* Dark Mode */
+body.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+/* Cards / Popups */
+body.dark a {
+  color: #90caf9;
+}
+
+body.dark .leaflet-popup-content-wrapper {
+  background: #1e1e1e;
+  color: #e0e0e0;
+}
+
+body.dark .leaflet-popup-tip {
+  background: #1e1e1e;
+}
