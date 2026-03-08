@@ -4,13 +4,13 @@ import Footer from "../components/Footer";
 
 function MainLayout() {
   return (
-    <>
+    <div className="app-shell">
       <Navbar />
-      <main style={{ minHeight: "80vh" }}>
+      <main className="main-content">
         <Outlet />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
 

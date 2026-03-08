@@ -1,25 +1,43 @@
-/* Default (Light) */
 body.light {
-  background-color: #ffffff;
-  color: #000000;
+  --bg: #f3f7f6;
+  --surface: #ffffff;
+  --surface-muted: #f8fbfa;
+  --text: #182126;
+  --text-muted: #5d6974;
+  --primary: #0f766e;
+  --primary-strong: #115e59;
+  --danger: #c2410c;
+  --line: #d6e2df;
+  --shadow: 0 14px 30px rgba(10, 27, 33, 0.08);
 }
 
-/* Dark Mode */
 body.dark {
-  background-color: #121212;
-  color: #e0e0e0;
+  --bg: #0f1720;
+  --surface: #16222b;
+  --surface-muted: #1c2a35;
+  --text: #ecf2f7;
+  --text-muted: #a4b2c0;
+  --primary: #34d399;
+  --primary-strong: #10b981;
+  --danger: #fb923c;
+  --line: #2b3c4a;
+  --shadow: 0 14px 30px rgba(2, 9, 15, 0.4);
 }
 
-/* Cards / Popups */
 body.dark a {
-  color: #90caf9;
+  color: #7be0c6;
 }
 
-body.dark .leaflet-popup-content-wrapper {
-  background: #1e1e1e;
-  color: #e0e0e0;
+body.dark .topbar {
+  background: rgba(15, 23, 32, 0.85);
 }
 
+body.dark .owner-sidebar {
+  background: #132129;
+}
+
+body.dark .leaflet-popup-content-wrapper,
 body.dark .leaflet-popup-tip {
-  background: #1e1e1e;
+  background: #132129;
+  color: #ecf2f7;
 }

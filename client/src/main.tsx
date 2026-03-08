@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { ThemeProvider } from "./context/ThemeContext";
 import "leaflet/dist/leaflet.css";
+import "./index.css";
 import "./styles/theme.css";
 
 import { registerSW } from "virtual:pwa-register";
@@ -16,9 +17,7 @@ registerSW({
   }
 });
 
-ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
-).render(
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <ThemeProvider>
       <App />

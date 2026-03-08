@@ -1,28 +1,26 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import OwnerRoute from "./components/OwnerRoute";
 import MainLayout from "./layouts/MainLayout";
 import OwnerLayout from "./layouts/OwnerLayout";
-
-import Home from "./pages/Home";
 import About from "./pages/About";
-import HowItWorks from "./pages/HowItWorks";
+import CountryIndia from "./pages/CountryIndia";
 import Favorites from "./pages/Favorites";
-import SpaceDetails from "./pages/SpaceDetails";
+import Home from "./pages/Home";
+import HowItWorks from "./pages/HowItWorks";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-
-import OwnerDashboard from "./pages/owner/OwnerDashboard";
+import SpaceDetails from "./pages/SpaceDetails";
 import AddSpace from "./pages/owner/AddSpace";
 import MySpaces from "./pages/owner/MySpaces";
-
-import OwnerRoute from "./components/OwnerRoute";
+import OwnerDashboard from "./pages/owner/OwnerDashboard";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Pages */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/country/india" element={<CountryIndia />} />
           <Route path="/about" element={<About />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/favorites" element={<Favorites />} />
@@ -31,7 +29,6 @@ function App() {
           <Route path="/register" element={<Register />} />
         </Route>
 
-        {/* 🔐 Owner Dashboard (Protected) */}
         <Route
           path="/owner"
           element={

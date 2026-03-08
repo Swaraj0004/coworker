@@ -1,28 +1,30 @@
-import { Outlet, Link } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 
 function OwnerLayout() {
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      
-      {/* Sidebar */}
-      <aside
-        style={{
-          width: "220px",
-          padding: "1rem",
-          borderRight: "1px solid #ddd"
-        }}
-      >
-        <h3>Owner Panel</h3>
+    <div className="owner-shell">
+      <aside className="owner-sidebar">
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: "0.8rem" }}>
+          <h3 style={{ margin: 0 }}>Owner Panel</h3>
+          <Link className="btn btn-outline" to="/">
+            Back
+          </Link>
+        </div>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <Link to="/owner/dashboard">Dashboard</Link>
-          <Link to="/owner/add-space">Add Space</Link>
-          <Link to="/owner/my-spaces">My Spaces</Link>
+        <nav className="owner-nav">
+          <Link className="nav-link" to="/owner/dashboard">
+            Dashboard
+          </Link>
+          <Link className="nav-link" to="/owner/add-space">
+            Add Space
+          </Link>
+          <Link className="nav-link" to="/owner/my-spaces">
+            My Spaces
+          </Link>
         </nav>
       </aside>
 
-      {/* Main Content */}
-      <main style={{ flex: 1, padding: "2rem" }}>
+      <main className="owner-main">
         <Outlet />
       </main>
     </div>

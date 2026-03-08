@@ -15,9 +15,9 @@ export default defineConfig({
       ],
 
       manifest: {
-        name: "Coworking Space Finder",
-        short_name: "Coworking",
-        description: "Find nearby coworking spaces with real-time availability",
+        name: "Space Now",
+        short_name: "SpaceNow",
+        description: "Find nearby spaces with real-time availability",
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",
@@ -42,7 +42,7 @@ export default defineConfig({
             urlPattern: /\/api\/spaces/,
             handler: "NetworkFirst",
             options: {
-              cacheName: "coworking-api-cache",
+              cacheName: "space-now-api-cache",
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24

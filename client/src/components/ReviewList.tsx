@@ -12,27 +12,30 @@ function ReviewList({ reviews }: Props) {
   }
 
   return (
-    <div>
+    <div className="space-grid">
       <h3>Reviews</h3>
 
-      {reviews.map((review, index) => (
-        <div
-          key={index}
-          style={{
-            padding: "0.5rem",
-            borderBottom: "1px solid #ddd"
-          }}
-        >
-          <StarRating rating={review.rating} />
-          <ReviewBadge isFake={review.isFake} />
+      {reviews.map((review, index) => {
+        const authorName =
+          typeof review.userId === "object" && review.userId !== null ? review.userId.name : "User";
 
-          <p>{review.comment}</p>
+        const confidence = review.confidence ?? review.confidenceScore;
 
-          {review.confidence && review.isFake && (
-            <small>Confidence: {Math.round(review.confidence * 100)}%</small>
-          )}
-        </div>
-      ))}
+        return (
+          <article key={review._id || index} className="surface-card space-card">
+            <div>
+              <strong>{authorName}</strong>
+            </div>
+            <StarRating rating={review.rating} />
+            <ReviewBadge isFake={review.isFake} />
+            <p>{review.comment}</p>
+
+            {confidence !== undefined && review.isFake && (
+              <small>Confidence: {Math.round(confidence * 100)}%</small>
+            )}
+          </article>
+        );
+      })}
     </div>
   );
 }

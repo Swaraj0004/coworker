@@ -3,7 +3,9 @@ interface Props {
 }
 
 function ReviewBadge({ isFake }: Props) {
-  if (isFake === undefined) return null;
+  if (isFake === undefined) {
+    return null;
+  }
 
   return (
     <span
@@ -16,7 +18,7 @@ function ReviewBadge({ isFake }: Props) {
         color: isFake ? "#900" : "#060"
       }}
     >
-      {isFake ? "⚠️ Suspicious" : "✔ Verified"}
+      {isFake ? "Suspicious" : "Verified"}
     </span>
   );
 }

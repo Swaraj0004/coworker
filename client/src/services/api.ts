@@ -1,18 +1,131 @@
-import type { Space } from "../types/space";
+import type {
+  CreateSpacePayload,
+  Review,
+  Space,
+  UpdateSpacePayload
+} from "../types/space";
 
-const BASE_URL = "http://localhost:5000/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+export interface IndiaCityStat {
+  city: string;
+  state: string;
+  tier: "Tier 1" | "Tier 2";
+  avgPrice: number;
+  spaces: number;
+  lat: number;
+  lng: number;
+}
+
+async function apiRequest<T>(
+  path: string,
+  options: RequestInit = {},
+  useAuth = false
+): Promise<T> {
+  const headers = new Headers(options.headers || {});
+
+  if (!headers.has("Content-Type") && options.body) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (useAuth) {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("Please login to continue");
+    }
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Request failed");
+  }
+
+  return response.json() as Promise<T>;
+}
 
 export async function fetchNearbySpaces(
   lat: number,
-  lng: number
+  lng: number,
+  radiusKm = 0
 ): Promise<Space[]> {
-  const res = await fetch(
-    `${BASE_URL}/spaces/nearby?lat=${lat}&lng=${lng}`
+  return apiRequest<Space[]>(`/spaces/nearby?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`);
+}
+
+export async function fetchIndiaCityStats(): Promise<IndiaCityStat[]> {
+  return apiRequest<IndiaCityStat[]>("/spaces/cities/india");
+}
+
+export async function fetchSpaceById(id: string): Promise<Space> {
+  return apiRequest<Space>(`/spaces/${id}`);
+}
+
+export async function fetchOwnerSpaces(): Promise<Space[]> {
+  return apiRequest<Space[]>("/spaces/owner/me", {}, true);
+}
+
+export async function createSpace(payload: CreateSpacePayload): Promise<Space> {
+  return apiRequest<Space>(
+    "/spaces",
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
+    },
+    true
+  );
+}
+
+export async function updateOwnerSpace(id: string, payload: UpdateSpacePayload): Promise<Space> {
+  return apiRequest<Space>(
+    `/spaces/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    },
+    true
+  );
+}
+
+export async function deleteOwnerSpace(id: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/spaces/${id}`,
+    {
+      method: "DELETE"
+    },
+    true
+  );
+}
+
+export async function fetchReviews(spaceId: string): Promise<Review[]> {
+  const reviews = await apiRequest<any[]>(`/reviews/${spaceId}`);
+
+  return reviews.map((review) => ({
+    ...review,
+    confidence: review.confidenceScore
+  })) as Review[];
+}
+
+export async function createReview(payload: {
+  spaceId: string;
+  rating: number;
+  comment: string;
+}): Promise<Review> {
+  const review = await apiRequest<any>(
+    "/reviews",
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
+    },
+    true
   );
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch spaces");
-  }
-
-  return res.json();
+  return {
+    ...review,
+    confidence: review.confidenceScore
+  } as Review;
 }

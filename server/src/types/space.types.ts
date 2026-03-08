@@ -22,5 +22,29 @@ export interface Space {
   availableSeats: number;
   location: Location;
   amenities: Amenities;
+  ownerId?: string;
+  city?: string;
+  state?: string;
+  tier?: "Tier 1" | "Tier 2";
+  address?: string;
+  overview?: string;
+  amenityHighlights?: string[];
+  photos?: string[];
+  pricing?: {
+    servicedOffice?: number;
+    coworkingSpace?: number;
+    privateOffice?: number;
+    virtualOffice?: number;
+  };
+  rating?: number;
+  reviewCount?: number;
+  ratingBreakdown?: {
+    location?: number;
+    wifi?: number;
+    productivity?: number;
+    comfort?: number;
+    community?: number;
+    amenities?: number;
+  };
   reviews?: Review[];
 }

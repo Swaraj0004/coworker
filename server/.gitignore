@@ -9,10 +9,6 @@ build/
 *.tsbuildinfo
 
 # Environment variables
-server/.env
-server/.env.local
-env
-env.local
 .env
 .env.*
 !.env.example

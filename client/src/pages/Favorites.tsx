@@ -4,22 +4,25 @@ import { Link } from "react-router-dom";
 function Favorites() {
   const favorites = getFavorites();
 
-  if (favorites.length === 0) {
-    return <p>No favorites yet ❤️</p>;
-  }
-
   return (
-    <div>
-      <h2>Your Favorite Coworking Spaces</h2>
+    <section className="section surface-card">
+      <h2 className="page-title">Your Favorite Coworking Spaces</h2>
+      <p className="page-subtitle">Quick access to the spaces you care about most.</p>
 
-      {favorites.map(space => (
-        <div key={space._id} style={{ marginBottom: "1rem" }}>
-          <h3>{space.name}</h3>
-          <p>₹ {space.pricePerMonth} / month</p>
-          <Link to={`/space/${space._id}`}>View Details</Link>
+      {favorites.length === 0 ? (
+        <p>No favorites yet.</p>
+      ) : (
+        <div className="space-grid">
+          {favorites.map((space) => (
+            <article key={space._id} className="surface-card space-card">
+              <h3>{space.name}</h3>
+              <p>{space.pricePerMonth} / month</p>
+              <Link to={`/space/${space._id}`}>View Details</Link>
+            </article>
+          ))}
         </div>
-      ))}
-    </div>
+      )}
+    </section>
   );
 }
 

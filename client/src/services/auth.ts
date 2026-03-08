@@ -1,16 +1,23 @@
 const BASE_URL = "http://localhost:5000/api/auth";
 
-export async function loginUser(data: {
-  email: string;
-  password: string;
-}) {
+async function parseResponse(res: Response) {
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Request failed");
+  }
+
+  return data;
+}
+
+export async function loginUser(data: { email: string; password: string }) {
   const res = await fetch(`${BASE_URL}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
   });
 
-  return res.json();
+  return parseResponse(res);
 }
 
 export async function registerUser(data: {
@@ -25,5 +32,5 @@ export async function registerUser(data: {
     body: JSON.stringify(data)
   });
 
-  return res.json();
+  return parseResponse(res);
 }

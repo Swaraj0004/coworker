@@ -9,12 +9,20 @@ export interface Amenities {
   parking: boolean;
 }
 
+export interface ReviewAuthor {
+  _id: string;
+  name: string;
+}
+
 export interface Review {
   _id?: string;
+  userId?: string | ReviewAuthor;
+  spaceId?: string;
   comment: string;
   rating: number;
-  isFake?: boolean;       // ⭐ ML result
-  confidence?: number;   // ⭐ ML confidence
+  isFake?: boolean;
+  confidence?: number;
+  confidenceScore?: number;
   createdAt?: string;
 }
 
@@ -23,16 +31,49 @@ export interface Space {
   name: string;
   description?: string;
   pricePerMonth: number;
-  location: {
-    type: "Point";
-    coordinates: [number, number];
-  };
-  amenities: {
-    wifi: boolean;
-    ac: boolean;
-    parking: boolean;
-  };
   availableSeats: number;
-  reviews?: Review[];     // ⭐ ADD THIS
+  ownerId?: string;
+  location: Location;
+  amenities: Amenities;
+  city?: string;
+  state?: string;
+  tier?: "Tier 1" | "Tier 2";
+  address?: string;
+  overview?: string;
+  amenityHighlights?: string[];
+  photos?: string[];
+  pricing?: {
+    servicedOffice?: number;
+    coworkingSpace?: number;
+    privateOffice?: number;
+    virtualOffice?: number;
+  };
+  rating?: number;
+  reviewCount?: number;
+  ratingBreakdown?: {
+    location?: number;
+    wifi?: number;
+    productivity?: number;
+    comfort?: number;
+    community?: number;
+    amenities?: number;
+  };
+  reviews?: Review[];
+  createdAt?: string;
 }
 
+export interface CreateSpacePayload {
+  name: string;
+  pricePerMonth: number;
+  availableSeats: number;
+  latitude: number;
+  longitude: number;
+  amenities: Amenities;
+}
+
+export interface UpdateSpacePayload {
+  name?: string;
+  pricePerMonth?: number;
+  availableSeats?: number;
+  amenities?: Amenities;
+}
