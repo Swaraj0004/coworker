@@ -1,27 +1,65 @@
-import { Link, Outlet } from "react-router-dom";
+import { useState } from "react";
+import { Link, Outlet, useNavigate } from "react-router-dom";
+import ThemeToggle from "../components/ThemeToggle";
+import { logout } from "../utils/auth";
 
 function OwnerLayout() {
+  const navigate = useNavigate();
+  const [manageOpen, setManageOpen] = useState(true);
+
+  const handleOwnerLogout = () => {
+    logout();
+    navigate("/");
+  };
+
   return (
     <div className="owner-shell">
-      <aside className="owner-sidebar">
+      <aside className="owner-sidebar owner-sidebar-menu">
         <div className="row" style={{ justifyContent: "space-between", marginBottom: "0.8rem" }}>
           <h3 style={{ margin: 0 }}>Owner Panel</h3>
-          <Link className="btn btn-outline" to="/">
-            Back
-          </Link>
+          <ThemeToggle />
         </div>
 
-        <nav className="owner-nav">
+        <nav className="owner-nav owner-menu-list">
           <Link className="nav-link" to="/owner/dashboard">
             Dashboard
           </Link>
-          <Link className="nav-link" to="/owner/add-space">
-            Add Space
+
+          <button
+            type="button"
+            className="owner-menu-toggle"
+            onClick={() => setManageOpen((prev) => !prev)}
+          >
+            Manage Space {manageOpen ? "?" : "?"}
+          </button>
+
+          {manageOpen && (
+            <div className="owner-submenu">
+              <Link className="nav-link" to="/owner/add-space">
+                Add Space
+              </Link>
+              <Link className="nav-link" to="/owner/my-spaces">
+                My Spaces
+              </Link>
+            </div>
+          )}
+
+          <Link className="nav-link" to="/owner/notifications">
+            Notification
           </Link>
-          <Link className="nav-link" to="/owner/my-spaces">
-            My Spaces
+
+          <p className="owner-heading">Genral Setting</p>
+
+          <Link className="nav-link" to="/owner/profile">
+            Profile
           </Link>
         </nav>
+
+        <div style={{ marginTop: "auto", paddingTop: "1rem" }}>
+          <button className="btn btn-danger" type="button" onClick={handleOwnerLogout}>
+            Logout
+          </button>
+        </div>
       </aside>
 
       <main className="owner-main">

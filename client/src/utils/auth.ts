@@ -9,4 +9,5 @@ export function getUserRole(): "user" | "owner" | "admin" | null {
 export function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("role");
+  localStorage.removeItem("username");
 }

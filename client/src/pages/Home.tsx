@@ -112,7 +112,7 @@ function Home() {
   return (
     <section className="home-shell">
       <h1 className="page-title">Discover Workspaces Near You</h1>
-      <p className="page-subtitle">Search by name, choose pricing, and pin your exact location.</p>
+      <p className="page-subtitle">Search by workspace name, filter by pricing, and pin your exact location.</p>
       {selectedCity && <p className="city-pill">Showing results around {selectedCity}</p>}
 
       <div className="surface-card home-controls">
@@ -148,7 +148,7 @@ function Home() {
       </div>
 
       <p className="page-subtitle" style={{ marginTop: "0.7rem" }}>
-        Showing {filteredSpaces.length} places.
+        Showing {filteredSpaces.length} places available.
       </p>
 
       <div className="map-wrap">

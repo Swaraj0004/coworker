@@ -1,14 +1,28 @@
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getUserRole, isAuthenticated, logout } from "../utils/auth";
+import { isAuthenticated, logout } from "../utils/auth";
 import ThemeToggle from "./ThemeToggle";
 
 function Navbar() {
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
+  useEffect(() => {
+    const closeOnOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("click", closeOnOutside);
+    return () => document.removeEventListener("click", closeOnOutside);
+  }, []);
 
   return (
     <header className="topbar">
@@ -28,32 +42,33 @@ function Navbar() {
           <Link className="nav-link" to="/how-it-works">
             How It Works
           </Link>
-          <Link className="nav-link" to="/favorites">
-            Favorites
-          </Link>
-
-          {isAuthenticated() && getUserRole() === "owner" && (
-            <Link className="nav-link" to="/owner/dashboard">
-              Owner Panel
-            </Link>
-          )}
 
           <ThemeToggle />
 
-          {!isAuthenticated() ? (
-            <>
-              <Link className="nav-link" to="/login">
-                Login
-              </Link>
-              <Link className="nav-link" to="/register">
-                Register
-              </Link>
-            </>
-          ) : (
-            <button className="btn btn-outline" onClick={handleLogout}>
-              Logout
+          <div className="user-menu" ref={menuRef}>
+            <button type="button" className="btn btn-outline" onClick={() => setMenuOpen((p) => !p)}>
+              <span className="user-icon">User</span>
             </button>
-          )}
+
+            {menuOpen && (
+              <div className="user-dropdown surface-card">
+                {!isAuthenticated() ? (
+                  <>
+                    <Link to="/login" onClick={() => setMenuOpen(false)}>
+                      Log In
+                    </Link>
+                    <Link to="/register" onClick={() => setMenuOpen(false)}>
+                      Sign Up
+                    </Link>
+                  </>
+                ) : (
+                  <button type="button" className="btn btn-outline" onClick={handleLogout}>
+                    Logout
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </nav>
     </header>

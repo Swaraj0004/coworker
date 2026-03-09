@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { fetchOwnerSpaces } from "../../services/api";
 import type { Space } from "../../types/space";
 
@@ -18,8 +17,8 @@ function OwnerDashboard() {
 
   return (
     <section className="surface-card section" style={{ width: "100%", margin: 0 }}>
-      <h1 className="page-title">Owner Dashboard</h1>
-      <p className="page-subtitle">Track your listings and update your spaces quickly.</p>
+      <h1 className="page-title">Dashboard</h1>
+      <p className="page-subtitle">Track your listings performance.</p>
 
       <div className="stat-grid">
         <article className="surface-card stat-card">
@@ -37,10 +36,6 @@ function OwnerDashboard() {
           <p>{avgPrice}</p>
         </article>
       </div>
-
-      <p style={{ marginTop: "1rem" }}>
-        <Link to="/owner/my-spaces">Go to My Spaces</Link>
-      </p>
     </section>
   );
 }

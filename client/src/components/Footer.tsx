@@ -1,7 +1,7 @@
 function Footer() {
   return (
     <footer className="site-footer">
-      <p>© 2026 Space Now</p>
+      <p>(c) 2026 Space Now</p>
     </footer>
   );
 }
