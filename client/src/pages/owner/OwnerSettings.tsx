@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { fetchOwnerEnquiryNotifications } from "../../services/api";
+import { fetchMyNotifications, markNotificationRead, respondToNotification, type AppNotification } from "../../services/api";
 import {
   checkUsername,
   fetchMyProfile,
@@ -36,13 +36,6 @@ interface SecurityFormState {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-}
-
-interface OwnerNotification {
-  id: string;
-  title: string;
-  message: string;
-  createdAt: string;
 }
 
 const SETTINGS_TABS: Array<{ key: Exclude<TabKey, "notifications">; label: string }> = [
@@ -95,8 +88,9 @@ function OwnerSettings() {
   const [securityMessage, setSecurityMessage] = useState<string>("");
   const [securityError, setSecurityError] = useState<string>("");
 
-  const [notifications, setNotifications] = useState<OwnerNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationsError, setNotificationsError] = useState<string>("");
+  const [notificationActionId, setNotificationActionId] = useState<string>("");
 
   const isOwner = profile?.role === "owner";
 
@@ -115,17 +109,23 @@ function OwnerSettings() {
     load();
   }, []);
 
+  const refreshNotifications = async () => {
+    try {
+      const items = await fetchMyNotifications();
+      setNotifications(items);
+      setNotificationsError("");
+    } catch (error) {
+      setNotifications([]);
+      setNotificationsError((error as Error).message || "Failed to fetch notifications");
+    }
+  };
+
   useEffect(() => {
     if (activeTab !== "notifications") {
       return;
     }
 
-    fetchOwnerEnquiryNotifications()
-      .then(setNotifications)
-      .catch((error) => {
-        setNotifications([]);
-        setNotificationsError((error as Error).message || "Failed to fetch notifications");
-      });
+    void refreshNotifications();
   }, [activeTab]);
 
   useEffect(() => {
@@ -274,10 +274,36 @@ function OwnerSettings() {
     }
   };
 
+  const handleMarkNotificationRead = async (notificationId: string) => {
+    try {
+      setNotificationActionId(notificationId + "-read");
+      await markNotificationRead(notificationId);
+      await refreshNotifications();
+    } catch (error) {
+      setNotificationsError((error as Error).message || "Failed to mark notification as read");
+    } finally {
+      setNotificationActionId("");
+    }
+  };
+
+  const handleNotificationDecision = async (
+    notificationId: string,
+    decision: "approved" | "rejected"
+  ) => {
+    try {
+      setNotificationActionId(`${notificationId}-${decision}`);
+      await respondToNotification(notificationId, decision);
+      await refreshNotifications();
+    } catch (error) {
+      setNotificationsError((error as Error).message || "Failed to update request");
+    } finally {
+      setNotificationActionId("");
+    }
+  };
   const renderNotificationsContent = () => (
     <div>
       <h1 className="page-title">Notifications</h1>
-      <p className="page-subtitle">Enquiries for your coworking spaces.</p>
+      <p className="page-subtitle">Quotes and tour requests for your coworking spaces.</p>
 
       {notificationsError && <p className="error-text">{notificationsError}</p>}
 
@@ -289,9 +315,49 @@ function OwnerSettings() {
         <div className="owner-notification-list">
           {notifications.map((notification) => (
             <article key={notification.id} className="surface-card owner-notification-card">
-              <h3>{notification.title}</h3>
-              <p>{notification.message}</p>
-              <small>{new Date(notification.createdAt).toLocaleString()}</small>
+              <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <h3>{notification.title}</h3>
+                  <p>{notification.message}</p>
+                  <small>{new Date(notification.createdAt).toLocaleString()}</small>
+                  {notification.actionStatus && (
+                    <p style={{ margin: "0.5rem 0 0", fontWeight: 600 }}>
+                      Status: {notification.actionStatus}
+                    </p>
+                  )}
+                </div>
+                {!notification.read && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => void handleMarkNotificationRead(notification.id)}
+                    disabled={notificationActionId === `${notification.id}-read`}
+                  >
+                    Mark as Read
+                  </button>
+                )}
+              </div>
+
+              {notification.actionable && (
+                <div className="row" style={{ marginTop: "0.8rem" }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => void handleNotificationDecision(notification.id, "approved")}
+                    disabled={notificationActionId.length > 0}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => void handleNotificationDecision(notification.id, "rejected")}
+                    disabled={notificationActionId.length > 0}
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
             </article>
           ))}
         </div>
@@ -591,3 +657,8 @@ function OwnerSettings() {
 }
 
 export default OwnerSettings;
+
+
+
+
+

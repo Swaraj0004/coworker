@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { INDIA_STATE_AND_UT_OPTIONS, getCitiesForRegion } from "../../data/indiaLocations";
 import { createSpace, uploadSpacePhotos } from "../../services/api";
 
 const AMENITY_SECTIONS: Array<{ title: string; items: string[] }> = [
@@ -24,6 +25,64 @@ const AMENITY_SECTIONS: Array<{ title: string; items: string[] }> = [
     items: ["Community Events", "Lounge Area", "24x7 Access", "Security", "Housekeeping"]
   }
 ];
+
+
+const parseCoordinateInput = (value: string, isLatitude: boolean) => {
+  const normalized = value
+    .trim()
+    .toUpperCase()
+    .replace(/[º°]/g, "°")
+    .replace(/['’`]/g, "'")
+    .replace(/[?“”]/g, '"')
+    .replace(/\s+/g, " ");
+
+  if (!normalized) {
+    return Number.NaN;
+  }
+
+  const decimal = Number(normalized);
+  if (!Number.isNaN(decimal)) {
+    return decimal;
+  }
+
+  const directionMatch = normalized.match(/[NSEW]/);
+  const direction = directionMatch?.[0];
+  if (!direction) {
+    return Number.NaN;
+  }
+
+  if (isLatitude && !["N", "S"].includes(direction)) {
+    return Number.NaN;
+  }
+
+  if (!isLatitude && !["E", "W"].includes(direction)) {
+    return Number.NaN;
+  }
+
+  const numericParts = normalized.match(/\d+(?:\.\d+)?/g);
+  if (!numericParts || numericParts.length < 3) {
+    return Number.NaN;
+  }
+
+  const degrees = Number(numericParts[0]);
+  const minutes = Number(numericParts[1]);
+  const seconds = Number(numericParts[2]);
+
+  if (!Number.isFinite(degrees) || !Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+    return Number.NaN;
+  }
+
+  if (minutes < 0 || minutes >= 60 || seconds < 0 || seconds >= 60) {
+    return Number.NaN;
+  }
+
+  let result = degrees + minutes / 60 + seconds / 3600;
+  if (direction === "S" || direction === "W") {
+    result *= -1;
+  }
+
+  return result;
+};
 
 function AddSpace() {
   const navigate = useNavigate();
@@ -53,6 +112,8 @@ function AddSpace() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
+  const cityOptions = useMemo(() => getCitiesForRegion(form.state), [form.state]);
+
   const amenitiesPayload = useMemo(
     () => ({
       wifi: selectedAmenities.includes("WiFi"),
@@ -66,6 +127,23 @@ function AddSpace() {
     setSelectedAmenities((prev) =>
       prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
     );
+  };
+
+  const handleStateChange = (state: string) => {
+    setForm((prev) => ({
+      ...prev,
+      state,
+      city: "",
+      latitude: "",
+      longitude: ""
+    }));
+  };
+
+  const handleCityChange = (cityName: string) => {
+    setForm((prev) => ({
+      ...prev,
+      city: cityName
+    }));
   };
 
   const handleUploadPhotos = async () => {
@@ -82,7 +160,8 @@ function AddSpace() {
       setPhotoUrls((prev) => [...prev, ...urls]);
       setSelectedFiles([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload photos");
+      const message = err instanceof Error ? err.message : "Failed to upload photos";
+      setError(`${message}. If Cloudinary was just configured, restart the server and try again.`);
     } finally {
       setUploading(false);
     }
@@ -91,6 +170,19 @@ function AddSpace() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const latitude = parseCoordinateInput(form.latitude, true);
+    const longitude = parseCoordinateInput(form.longitude, false);
+
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      setError("Latitude must be valid. Example: 21deg 06min 54.7sec N or 21.14631");
+      return;
+    }
+
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      setError("Longitude must be valid. Example: 79deg 05min 17.5sec E or 79.08820");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -102,8 +194,8 @@ function AddSpace() {
         overview: form.overview,
         pricePerMonth: Number(form.pricePerMonth),
         availableSeats: Number(form.availableSeats),
-        latitude: Number(form.latitude),
-        longitude: Number(form.longitude),
+        latitude,
+        longitude,
         amenityHighlights: selectedAmenities,
         photos: photoUrls,
         pricing: {
@@ -141,21 +233,32 @@ function AddSpace() {
           </label>
 
           <label className="field">
-            City
-            <input
-              value={form.city}
-              onChange={(e) => setForm({ ...form, city: e.target.value })}
-              required
-            />
+            State / Union Territory
+            <select value={form.state} onChange={(e) => handleStateChange(e.target.value)} required>
+              <option value="">Select state or union territory</option>
+              {INDIA_STATE_AND_UT_OPTIONS.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="field">
-            State
-            <input
-              value={form.state}
-              onChange={(e) => setForm({ ...form, state: e.target.value })}
+            City
+            <select
+              value={form.city}
+              onChange={(e) => handleCityChange(e.target.value)}
+              disabled={!form.state}
               required
-            />
+            >
+              <option value="">Select city</option>
+              {cityOptions.map((city) => (
+                <option key={`${form.state}-${city.name}`} value={city.name}>
+                  {city.name}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="field owner-span-2">
@@ -180,6 +283,7 @@ function AddSpace() {
             Price per Month
             <input
               type="number"
+              min="0"
               value={form.pricePerMonth}
               onChange={(e) => setForm({ ...form, pricePerMonth: e.target.value })}
               required
@@ -190,6 +294,7 @@ function AddSpace() {
             Available Seats
             <input
               type="number"
+              min="1"
               value={form.availableSeats}
               onChange={(e) => setForm({ ...form, availableSeats: e.target.value })}
               required
@@ -199,8 +304,8 @@ function AddSpace() {
           <label className="field">
             Latitude
             <input
-              type="number"
-              step="any"
+              type="text"
+              placeholder={"21deg 06min 54.7sec N or 21.14631"}
               value={form.latitude}
               onChange={(e) => setForm({ ...form, latitude: e.target.value })}
               required
@@ -210,8 +315,8 @@ function AddSpace() {
           <label className="field">
             Longitude
             <input
-              type="number"
-              step="any"
+              type="text"
+              placeholder={"79deg 05min 17.5sec E or 79.08820"}
               value={form.longitude}
               onChange={(e) => setForm({ ...form, longitude: e.target.value })}
               required
@@ -222,6 +327,7 @@ function AddSpace() {
             Serviced Office Price
             <input
               type="number"
+              min="0"
               value={form.servicedOffice}
               onChange={(e) => setForm({ ...form, servicedOffice: e.target.value })}
             />
@@ -231,6 +337,7 @@ function AddSpace() {
             Coworking Space Price
             <input
               type="number"
+              min="0"
               value={form.coworkingSpace}
               onChange={(e) => setForm({ ...form, coworkingSpace: e.target.value })}
             />
@@ -240,6 +347,7 @@ function AddSpace() {
             Private Office Price
             <input
               type="number"
+              min="0"
               value={form.privateOffice}
               onChange={(e) => setForm({ ...form, privateOffice: e.target.value })}
             />
@@ -249,6 +357,7 @@ function AddSpace() {
             Virtual Office Price
             <input
               type="number"
+              min="0"
               value={form.virtualOffice}
               onChange={(e) => setForm({ ...form, virtualOffice: e.target.value })}
             />

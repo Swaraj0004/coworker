@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  formatMembershipPlan,
   getUserMemberships,
   payMembership,
   removeMembership,
@@ -34,7 +35,7 @@ function UserYourSpaces() {
           {memberships.map((item) => (
             <article key={item.spaceId} className="surface-card space-card">
               <h3>{item.spaceName}</h3>
-              <p style={{ margin: "0.2rem 0" }}>Plan: {item.plan}</p>
+              <p style={{ margin: "0.2rem 0" }}>Plan: {formatMembershipPlan(item.plan)}</p>
               <p style={{ margin: "0.2rem 0" }}>Status: {item.status}</p>
               <p style={{ margin: "0.2rem 0" }}>Monthly Price: Rs {item.monthlyPrice}</p>
               <p style={{ margin: "0.2rem 0" }}>

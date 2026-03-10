@@ -47,6 +47,10 @@ function UserLayout() {
             </div>
           )}
 
+          <Link className="nav-link" to="/user/settings?tab=notifications">
+            Notifications
+          </Link>
+
           <p className="owner-heading">General Setting</p>
 
           <Link className="nav-link" to="/user/settings?tab=profile">
@@ -75,3 +79,4 @@ function UserLayout() {
 }
 
 export default UserLayout;
+

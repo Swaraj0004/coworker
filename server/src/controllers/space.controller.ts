@@ -15,6 +15,66 @@ const normalizeStringArray = (value: unknown): string[] | undefined => {
   return cleaned.length ? cleaned : undefined;
 };
 
+const normalizeOptionalString = (value: unknown) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = String(value || "").trim();
+  return normalized || undefined;
+};
+
+const areValidCoordinates = (latitude: number, longitude: number) => {
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  );
+};
+
+const geocodeIndianAddress = async (address?: string, city?: string, state?: string) => {
+  const query = [address, city, state, "India"].filter(Boolean).join(", ");
+  if (!query) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Space-Now/1.0 owner-space-geocoder"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const results = (await response.json()) as Array<{ lat?: string; lon?: string }>;
+    const exactLocation = results[0];
+    if (!exactLocation?.lat || !exactLocation?.lon) {
+      return null;
+    }
+
+    const latitude = Number(exactLocation.lat);
+    const longitude = Number(exactLocation.lon);
+
+    if (!areValidCoordinates(latitude, longitude)) {
+      return null;
+    }
+
+    return { latitude, longitude };
+  } catch {
+    return null;
+  }
+};
+
 const uploadSingleFile = (file: Express.Multer.File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -23,7 +83,16 @@ const uploadSingleFile = (file: Express.Multer.File): Promise<string> => {
       },
       (error, result) => {
         if (error || !result) {
-          reject(error || new Error("Upload failed"));
+          reject(
+            new Error(
+              typeof error === "object" &&
+                error !== null &&
+                "message" in error &&
+                typeof (error as { message?: unknown }).message === "string"
+                ? (error as { message: string }).message
+                : "Photo upload failed"
+            )
+          );
           return;
         }
 
@@ -57,8 +126,42 @@ export const uploadSpacePhotos = async (req: AuthenticatedRequest, res: Response
     const urls = await Promise.all(files.map((file) => uploadSingleFile(file)));
 
     return res.json({ urls });
+  } catch (error) {
+    const message =
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+        ? (error as { message: string }).message
+        : error instanceof Error
+          ? error.message
+          : "Photo upload failed";
+    return res.status(500).json({ message });
+  }
+};
+
+export const geocodeSpaceAddress = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const address = normalizeOptionalString(req.body.address);
+    const city = normalizeOptionalString(req.body.city);
+    const state = normalizeOptionalString(req.body.state);
+
+    if (!address || !city || !state) {
+      return res.status(400).json({ message: "Address, city and state are required" });
+    }
+
+    const exactLocation = await geocodeIndianAddress(address, city, state);
+    if (!exactLocation) {
+      return res.status(404).json({ message: "No exact map result found for this address" });
+    }
+
+    return res.json(exactLocation);
   } catch {
-    return res.status(500).json({ message: "Photo upload failed" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -150,7 +253,8 @@ export const getOwnerEnquiryNotifications = async (req: AuthenticatedRequest, re
     const spaces = await Space.find({ ownerId: req.user.id }).sort({ updatedAt: -1 });
 
     const notifications = spaces.map((space, index) => {
-      const seatSignal = space.availableSeats > 0 ? `${space.availableSeats} seats available` : "No seats available";
+      const seatSignal =
+        space.availableSeats > 0 ? `${space.availableSeats} seats available` : "No seats available";
       const placeLabel = [space.city, space.state].filter(Boolean).join(", ") || "Unspecified location";
 
       return {
@@ -215,18 +319,38 @@ export const createSpace = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    const normalizedCity = normalizeOptionalString(city);
+    const normalizedState = normalizeOptionalString(state);
+    const normalizedAddress = normalizeOptionalString(address);
+    const fallbackLatitude = Number(latitude);
+    const fallbackLongitude = Number(longitude);
+    const geocodedLocation = await geocodeIndianAddress(
+      normalizedAddress,
+      normalizedCity,
+      normalizedState
+    );
+
+    const finalLatitude = geocodedLocation?.latitude ?? fallbackLatitude;
+    const finalLongitude = geocodedLocation?.longitude ?? fallbackLongitude;
+
+    if (!areValidCoordinates(finalLatitude, finalLongitude)) {
+      return res.status(400).json({
+        message: "A valid address location or valid latitude and longitude are required"
+      });
+    }
+
     const space = await Space.create({
       name,
       pricePerMonth: Number(pricePerMonth),
       availableSeats: Number(availableSeats),
       location: {
         type: "Point",
-        coordinates: [Number(longitude), Number(latitude)]
+        coordinates: [finalLongitude, finalLatitude]
       },
-      city: city ? String(city).trim() : undefined,
-      state: state ? String(state).trim() : undefined,
-      address: address ? String(address).trim() : undefined,
-      overview: overview ? String(overview).trim() : undefined,
+      city: normalizedCity,
+      state: normalizedState,
+      address: normalizedAddress,
+      overview: normalizeOptionalString(overview),
       amenityHighlights: normalizeStringArray(amenityHighlights),
       photos: normalizeStringArray(photos),
       pricing: pricing
@@ -288,6 +412,20 @@ export const updateOwnerSpace = async (req: AuthenticatedRequest, res: Response)
       amenities
     } = req.body;
 
+    const existingSpace = await Space.findOne({
+      _id: req.params.id,
+      ownerId: req.user.id
+    });
+
+    if (!existingSpace) {
+      return res.status(404).json({ message: "Space not found or not owned by you" });
+    }
+
+    const nextCity = city !== undefined ? normalizeOptionalString(city) : existingSpace.city;
+    const nextState = state !== undefined ? normalizeOptionalString(state) : existingSpace.state;
+    const nextAddress = address !== undefined ? normalizeOptionalString(address) : existingSpace.address;
+    const geocodedLocation = await geocodeIndianAddress(nextAddress, nextCity, nextState);
+
     const space = await Space.findOneAndUpdate(
       {
         _id: req.params.id,
@@ -297,10 +435,10 @@ export const updateOwnerSpace = async (req: AuthenticatedRequest, res: Response)
         ...(name !== undefined ? { name } : {}),
         ...(pricePerMonth !== undefined ? { pricePerMonth: Number(pricePerMonth) } : {}),
         ...(availableSeats !== undefined ? { availableSeats: Number(availableSeats) } : {}),
-        ...(city !== undefined ? { city: String(city || "").trim() || undefined } : {}),
-        ...(state !== undefined ? { state: String(state || "").trim() || undefined } : {}),
-        ...(address !== undefined ? { address: String(address || "").trim() || undefined } : {}),
-        ...(overview !== undefined ? { overview: String(overview || "").trim() || undefined } : {}),
+        ...(city !== undefined ? { city: nextCity } : {}),
+        ...(state !== undefined ? { state: nextState } : {}),
+        ...(address !== undefined ? { address: nextAddress } : {}),
+        ...(overview !== undefined ? { overview: normalizeOptionalString(overview) } : {}),
         ...(amenityHighlights !== undefined
           ? { amenityHighlights: normalizeStringArray(amenityHighlights) }
           : {}),
@@ -329,6 +467,14 @@ export const updateOwnerSpace = async (req: AuthenticatedRequest, res: Response)
                 wifi: Boolean(amenities.wifi),
                 ac: Boolean(amenities.ac),
                 parking: Boolean(amenities.parking)
+              }
+            }
+          : {}),
+        ...(geocodedLocation
+          ? {
+              location: {
+                type: "Point",
+                coordinates: [geocodedLocation.longitude, geocodedLocation.latitude]
               }
             }
           : {})

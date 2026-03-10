@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ReviewForm from "../components/ReviewForm";
 import ReviewList from "../components/ReviewList";
-import { createReview, fetchReviews, fetchSpaceById } from "../services/api";
+import { createReview, createSpaceLead, fetchReviews, fetchSpaceById } from "../services/api";
 import { isAuthenticated } from "../utils/auth";
+import { getFavorites, toggleFavorite } from "../utils/favorites";
+import { addUserMembership, formatMembershipPlan, type MembershipPlan } from "../utils/memberships";
 import type { Review, Space } from "../types/space";
 
 function SpaceDetails() {
@@ -12,6 +14,10 @@ function SpaceDetails() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState<MembershipPlan>("coworking-space");
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(getFavorites().map((item) => item._id));
+  const [message, setMessage] = useState("");
+  const [leadLoading, setLeadLoading] = useState<"quote" | "tour" | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -53,6 +59,53 @@ function SpaceDetails() {
     }
   };
 
+  const handleFavorite = () => {
+    if (!space) {
+      return;
+    }
+
+    const updated = toggleFavorite(space);
+    setFavoriteIds(updated.map((item) => item._id));
+    setMessage(
+      updated.some((item) => item._id === space._id)
+        ? `${space.name} added to favorites.`
+        : `${space.name} removed from favorites.`
+    );
+  };
+
+  const handleAddMembership = () => {
+    if (!space) {
+      return;
+    }
+
+    addUserMembership(space, selectedPlan);
+    setMessage(`${space.name} added to Your Spaces with ${formatMembershipPlan(selectedPlan)} plan.`);
+  };
+
+  const handleLeadAction = async (action: "quote" | "tour") => {
+    if (!space) {
+      return;
+    }
+
+    if (!isAuthenticated()) {
+      setMessage("Please login first to request a quote or book a tour.");
+      return;
+    }
+
+    try {
+      setLeadLoading(action);
+      const response = await createSpaceLead({
+        spaceId: space._id,
+        action
+      });
+      setMessage(response.message);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Action failed");
+    } finally {
+      setLeadLoading(null);
+    }
+  };
+
   if (loading) {
     return <section className="section surface-card">Loading space details...</section>;
   }
@@ -80,16 +133,18 @@ function SpaceDetails() {
     "Printing"
   ];
 
-  const gallery = space.photos && space.photos.length > 0
-    ? space.photos
-    : [
-        "https://picsum.photos/seed/default-1/1200/800",
-        "https://picsum.photos/seed/default-2/1200/800",
-        "https://picsum.photos/seed/default-3/1200/800",
-        "https://picsum.photos/seed/default-4/1200/800"
-      ];
+  const gallery =
+    space.photos && space.photos.length > 0
+      ? space.photos
+      : [
+          "https://picsum.photos/seed/default-1/1200/800",
+          "https://picsum.photos/seed/default-2/1200/800",
+          "https://picsum.photos/seed/default-3/1200/800",
+          "https://picsum.photos/seed/default-4/1200/800"
+        ];
 
   const rating = space.rating || 4.6;
+  const isFavoriteSpace = favoriteIds.includes(space._id);
 
   return (
     <section className="space-details-shell">
@@ -148,6 +203,10 @@ function SpaceDetails() {
               <h4>Virtual Office</h4>
               <p>{pricing.virtualOffice}/month</p>
             </article>
+            <article className="surface-card pricing-card">
+              <h4>Serviced Office</h4>
+              <p>{pricing.servicedOffice}/month</p>
+            </article>
           </div>
 
           <h3>Reviews</h3>
@@ -164,8 +223,36 @@ function SpaceDetails() {
           <p>from {pricing.servicedOffice}/month</p>
           <h3>Coworking Space</h3>
           <p>from {pricing.coworkingSpace}/month</p>
-          <button className="btn btn-primary" type="button">GET QUOTE</button>
-          <button className="btn btn-outline" type="button">BOOK A TOUR</button>
+          <button className="btn btn-primary" type="button" onClick={() => void handleLeadAction("quote")} disabled={leadLoading !== null}>
+            {leadLoading === "quote" ? "SENDING..." : "GET QUOTE"}
+          </button>
+          <button className="btn btn-outline" type="button" onClick={() => void handleLeadAction("tour")} disabled={leadLoading !== null}>
+            {leadLoading === "tour" ? "BOOKING..." : "BOOK A TOUR"}
+          </button>
+
+          <div className="row" style={{ marginTop: "1rem", flexWrap: "wrap" }}>
+            <button className="btn btn-outline" type="button" onClick={handleFavorite}>
+              {isFavoriteSpace ? "Remove Favorite" : "Add Favorite"}
+            </button>
+
+            <select
+              className="control-input"
+              style={{ minWidth: "220px" }}
+              value={selectedPlan}
+              onChange={(e) => setSelectedPlan(e.target.value as MembershipPlan)}
+            >
+              <option value="coworking-space">Coworking Space</option>
+              <option value="private-office">Private Office</option>
+              <option value="virtual-office">Virtual Office</option>
+              <option value="serviced-office">Serviced Office</option>
+            </select>
+
+            <button className="btn btn-primary" type="button" onClick={handleAddMembership}>
+              Add To Your Spaces
+            </button>
+          </div>
+
+          {message && <p style={{ color: message.includes("failed") || message.includes("Please login") ? "#b42318" : "#15803d", margin: "0.75rem 0 0" }}>{message}</p>}
         </aside>
       </div>
     </section>

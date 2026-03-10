@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import MapView from "../../components/MapView";
 import { fetchNearbySpaces } from "../../services/api";
 import type { Space } from "../../types/space";
 import { getFavorites, toggleFavorite } from "../../utils/favorites";
-import { addUserMembership } from "../../utils/memberships";
+import { addUserMembership, formatMembershipPlan, type MembershipPlan } from "../../utils/memberships";
 
 interface Coordinates {
   lat: number;
@@ -18,7 +19,7 @@ function UserSearchSpace() {
   const [budget, setBudget] = useState("all");
   const [radiusKm, setRadiusKm] = useState(0);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(getFavorites().map((item) => item._id));
-  const [selectedPlans, setSelectedPlans] = useState<Record<string, "hot-desk" | "dedicated-desk" | "private-office">>({});
+  const [selectedPlans, setSelectedPlans] = useState<Record<string, MembershipPlan>>({});
   const [message, setMessage] = useState("");
 
   const loadNearbySpaces = async (location: Coordinates, radius = radiusKm) => {
@@ -90,9 +91,9 @@ function UserSearchSpace() {
   };
 
   const handleAddMembership = (space: Space) => {
-    const plan = selectedPlans[space._id] || "hot-desk";
+    const plan = selectedPlans[space._id] || "coworking-space";
     addUserMembership(space, plan);
-    setMessage(`${space.name} added to Your Spaces with ${plan} plan.`);
+    setMessage(`${space.name} added to Your Spaces with ${formatMembershipPlan(plan)} plan.`);
   };
 
   if (loading) {
@@ -168,6 +169,10 @@ function UserSearchSpace() {
               </p>
 
               <div className="row">
+                <Link to={`/space/${space._id}`} className="btn btn-outline">
+                  View Place
+                </Link>
+
                 <button className="btn btn-outline" onClick={() => handleFavorite(space)}>
                   {favoriteIds.includes(space._id) ? "Remove Favorite" : "Add Favorite"}
                 </button>
@@ -175,17 +180,18 @@ function UserSearchSpace() {
                 <select
                   className="control-input"
                   style={{ maxWidth: "220px" }}
-                  value={selectedPlans[space._id] || "hot-desk"}
+                  value={selectedPlans[space._id] || "coworking-space"}
                   onChange={(e) =>
                     setSelectedPlans((prev) => ({
                       ...prev,
-                      [space._id]: e.target.value as "hot-desk" | "dedicated-desk" | "private-office"
+                      [space._id]: e.target.value as MembershipPlan
                     }))
                   }
                 >
-                  <option value="hot-desk">Hot Desk</option>
-                  <option value="dedicated-desk">Dedicated Desk</option>
+                  <option value="coworking-space">Coworking Space</option>
                   <option value="private-office">Private Office</option>
+                  <option value="virtual-office">Virtual Office</option>
+                  <option value="serviced-office">Serviced Office</option>
                 </select>
 
                 <button className="btn btn-primary" onClick={() => handleAddMembership(space)}>
@@ -201,3 +207,4 @@ function UserSearchSpace() {
 }
 
 export default UserSearchSpace;
+

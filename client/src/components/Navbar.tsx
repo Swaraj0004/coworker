@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { isAuthenticated, logout } from "../utils/auth";
+import { getUserRole, isAuthenticated, logout } from "../utils/auth";
 import ThemeToggle from "./ThemeToggle";
 
 function Navbar() {
@@ -11,6 +11,18 @@ function Navbar() {
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  const handleDashboard = () => {
+    const role = getUserRole();
+    setMenuOpen(false);
+
+    if (role === "owner") {
+      navigate("/owner/dashboard");
+      return;
+    }
+
+    navigate("/user/dashboard");
   };
 
   useEffect(() => {
@@ -62,9 +74,14 @@ function Navbar() {
                     </Link>
                   </>
                 ) : (
-                  <button type="button" className="btn btn-outline" onClick={handleLogout}>
-                    Logout
-                  </button>
+                  <>
+                    <button type="button" className="btn btn-outline" onClick={handleDashboard}>
+                      Dashboard
+                    </button>
+                    <button type="button" className="btn btn-outline" onClick={handleLogout}>
+                      Logout
+                    </button>
+                  </>
                 )}
               </div>
             )}

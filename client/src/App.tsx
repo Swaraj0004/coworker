@@ -66,6 +66,7 @@ function App() {
           <Route path="favorite-spaces" element={<UserFavoriteSpaces />} />
           <Route path="your-spaces" element={<UserYourSpaces />} />
           <Route path="settings" element={<UserSettings />} />
+          <Route path="notifications" element={<Navigate to="/user/settings?tab=notifications" replace />} />
           <Route index element={<Navigate to="/user/dashboard" replace />} />
         </Route>
       </Routes>
@@ -74,3 +75,4 @@ function App() {
 }
 
 export default App;
+

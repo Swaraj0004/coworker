@@ -4,6 +4,7 @@ import { spaceImageUpload } from "../middleware/upload.middleware";
 import {
   createSpace,
   deleteOwnerSpace,
+  geocodeSpaceAddress,
   getIndiaCityStats,
   getNearbySpaces,
   getOwnerEnquiryNotifications,
@@ -19,6 +20,7 @@ router.get("/nearby", getNearbySpaces);
 router.get("/cities/india", getIndiaCityStats);
 router.get("/owner/me", authenticate, requireRole("owner"), getOwnerSpaces);
 router.get("/owner/enquiries", authenticate, requireRole("owner"), getOwnerEnquiryNotifications);
+router.post("/geocode", authenticate, requireRole("owner"), geocodeSpaceAddress);
 router.post(
   "/upload-photo",
   authenticate,

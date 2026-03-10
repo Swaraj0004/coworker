@@ -2,13 +2,33 @@ import type { Space } from "../types/space";
 
 const STORAGE_KEY = "user_memberships";
 
+export type MembershipPlan =
+  | "coworking-space"
+  | "private-office"
+  | "virtual-office"
+  | "serviced-office";
+
 export interface UserMembership {
   spaceId: string;
   spaceName: string;
-  plan: "hot-desk" | "dedicated-desk" | "private-office";
+  plan: MembershipPlan;
   status: "active" | "paused";
   monthlyPrice: number;
   nextBillingDate: string;
+}
+
+export function formatMembershipPlan(plan: MembershipPlan): string {
+  switch (plan) {
+    case "private-office":
+      return "Private Office";
+    case "virtual-office":
+      return "Virtual Office";
+    case "serviced-office":
+      return "Serviced Office";
+    case "coworking-space":
+    default:
+      return "Coworking Space";
+  }
 }
 
 export function getUserMemberships(): UserMembership[] {
@@ -20,6 +40,22 @@ function saveUserMemberships(data: UserMembership[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+function getPlanPrice(space: Space, plan: MembershipPlan): number {
+  const pricing = space.pricing || {};
+
+  switch (plan) {
+    case "serviced-office":
+      return pricing.servicedOffice ?? space.pricePerMonth + 12000;
+    case "private-office":
+      return pricing.privateOffice ?? space.pricePerMonth + 7000;
+    case "virtual-office":
+      return pricing.virtualOffice ?? 2500;
+    case "coworking-space":
+    default:
+      return pricing.coworkingSpace ?? space.pricePerMonth;
+  }
+}
+
 export function addUserMembership(space: Space, plan: UserMembership["plan"]): UserMembership[] {
   const memberships = getUserMemberships();
 
@@ -27,13 +63,7 @@ export function addUserMembership(space: Space, plan: UserMembership["plan"]): U
     return memberships;
   }
 
-  const multipliers: Record<UserMembership["plan"], number> = {
-    "hot-desk": 1,
-    "dedicated-desk": 1.25,
-    "private-office": 1.8
-  };
-
-  const monthlyPrice = Math.round(space.pricePerMonth * multipliers[plan]);
+  const monthlyPrice = Math.round(getPlanPrice(space, plan));
   const nextBillingDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const updated = [

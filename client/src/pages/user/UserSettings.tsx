@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
+import { fetchMyNotifications, markNotificationRead, type AppNotification } from "../../services/api";
 import {
   checkUsername,
   fetchMyProfile,
@@ -9,8 +10,9 @@ import {
   updateMySecurity,
   type UpdateProfilePayload
 } from "../../services/auth";
+import { formatMembershipPlan, getUserMemberships } from "../../utils/memberships";
 
-type TabKey = "profile" | "security" | "help";
+type TabKey = "profile" | "security" | "notifications" | "help";
 
 interface ProfileFormState {
   name: string;
@@ -35,7 +37,7 @@ interface SecurityFormState {
   confirmPassword: string;
 }
 
-const TABS: Array<{ key: TabKey; label: string }> = [
+const TABS: Array<{ key: Exclude<TabKey, "notifications">; label: string }> = [
   { key: "profile", label: "Profile" },
   { key: "security", label: "Security" },
   { key: "help", label: "Get Help" }
@@ -62,7 +64,10 @@ function toProfileForm(profile: MyProfile): ProfileFormState {
 function UserSettings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryTab = searchParams.get("tab") as TabKey | null;
-  const activeTab: TabKey = TABS.some((t) => t.key === queryTab) ? (queryTab as TabKey) : "profile";
+  const validTabs: TabKey[] = ["profile", "security", "notifications", "help"];
+  const activeTab: TabKey = validTabs.includes((queryTab || "") as TabKey)
+    ? (queryTab as TabKey)
+    : "profile";
 
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [profileForm, setProfileForm] = useState<ProfileFormState | null>(null);
@@ -79,6 +84,9 @@ function UserSettings() {
   });
   const [securityMessage, setSecurityMessage] = useState<string>("");
   const [securityError, setSecurityError] = useState<string>("");
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notificationsError, setNotificationsError] = useState<string>("");
+  const [notificationActionId, setNotificationActionId] = useState<string>("");
 
   useEffect(() => {
     const load = async () => {
@@ -94,6 +102,25 @@ function UserSettings() {
 
     load();
   }, []);
+
+  const refreshNotifications = async () => {
+    try {
+      const items = await fetchMyNotifications();
+      setNotifications(items);
+      setNotificationsError("");
+    } catch (error) {
+      setNotifications([]);
+      setNotificationsError((error as Error).message || "Failed to fetch notifications");
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== "notifications") {
+      return;
+    }
+
+    void refreshNotifications();
+  }, [activeTab]);
 
   useEffect(() => {
     if (!profileForm || !profile) {
@@ -144,7 +171,25 @@ function UserSettings() {
     return profile ? toProfileForm(profile) : null;
   }, [profile]);
 
-  const onTabChange = (tab: TabKey) => {
+  const dueSoonReminders = useMemo(() => {
+    const now = new Date();
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+
+    return getUserMemberships()
+      .filter((item) => item.status === "active")
+      .map((item) => {
+        const dueDate = new Date(item.nextBillingDate);
+        const diff = dueDate.getTime() - now.getTime();
+        return {
+          ...item,
+          diff
+        };
+      })
+      .filter((item) => item.diff >= 0 && item.diff <= threeDaysMs)
+      .sort((a, b) => a.diff - b.diff);
+  }, [activeTab]);
+
+  const onTabChange = (tab: Exclude<TabKey, "notifications">) => {
     setSearchParams({ tab });
   };
 
@@ -239,6 +284,75 @@ function UserSettings() {
     }
   };
 
+  const handleMarkNotificationRead = async (notificationId: string) => {
+    try {
+      setNotificationActionId(notificationId);
+      await markNotificationRead(notificationId);
+      await refreshNotifications();
+    } catch (error) {
+      setNotificationsError((error as Error).message || "Failed to mark notification as read");
+    } finally {
+      setNotificationActionId("");
+    }
+  };
+  const renderNotifications = () => (
+    <div>
+      <h1 className="page-title">Notifications</h1>
+      <p className="page-subtitle">Updates for your quotes, tours and upcoming payments.</p>
+
+      {notificationsError && <p className="error-text">{notificationsError}</p>}
+
+      {!!dueSoonReminders.length && (
+        <div className="owner-notification-list" style={{ marginBottom: "1rem" }}>
+          {dueSoonReminders.map((item) => (
+            <article key={`${item.spaceId}-payment-reminder`} className="surface-card owner-notification-card">
+              <h3>Payment due soon</h3>
+              <p>
+                Your {formatMembershipPlan(item.plan)} membership for {item.spaceName} is due on {new Date(item.nextBillingDate).toLocaleDateString()}.
+              </p>
+              <small>Monthly price: Rs {item.monthlyPrice}</small>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {!notifications.length ? (
+        <div className="surface-card" style={{ padding: "1rem", borderRadius: "12px" }}>
+          No notifications right now.
+        </div>
+      ) : (
+        <div className="owner-notification-list">
+          {notifications.map((notification) => (
+            <article key={notification.id} className="surface-card owner-notification-card">
+              <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <h3>{notification.title}</h3>
+                  <p>{notification.message}</p>
+                  <small>{new Date(notification.createdAt).toLocaleString()}</small>
+                  {notification.actionStatus && (
+                    <p style={{ margin: "0.5rem 0 0", fontWeight: 600 }}>
+                      Status: {notification.actionStatus}
+                    </p>
+                  )}
+                </div>
+                {!notification.read && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => void handleMarkNotificationRead(notification.id)}
+                    disabled={notificationActionId === notification.id}
+                  >
+                    Mark as Read
+                  </button>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   if (!profileForm) {
     return (
       <section className="surface-card section" style={{ width: "100%", margin: 0 }}>
@@ -249,11 +363,19 @@ function UserSettings() {
     );
   }
 
+  if (activeTab === "notifications") {
+    return (
+      <section className="surface-card section" style={{ width: "100%", margin: 0 }}>
+        {renderNotifications()}
+      </section>
+    );
+  }
+
   return (
     <section className="owner-settings-shell">
       <aside className="surface-card owner-settings-nav">
         <h2>Settings</h2>
-        <p className="page-subtitle">Manage your profile and security details.</p>
+        <p className="page-subtitle">Manage your profile, security and account updates.</p>
 
         <div className="owner-settings-links">
           {TABS.map((tab) => (
@@ -494,3 +616,7 @@ function UserSettings() {
 }
 
 export default UserSettings;
+
+
+
+

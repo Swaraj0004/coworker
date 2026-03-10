@@ -16,13 +16,16 @@ export interface IndiaCityStat {
   lng: number;
 }
 
-export interface OwnerEnquiryNotification {
+export interface AppNotification {
   id: string;
-  type: "enquiry";
+  type: "quote" | "tour" | "payment_reminder" | "system";
   title: string;
   message: string;
-  spaceId: string;
+  spaceId?: string;
   createdAt: string;
+  read: boolean;
+  actionStatus?: "pending" | "approved" | "rejected";
+  actionable?: boolean;
 }
 
 async function apiRequest<T>(
@@ -77,8 +80,61 @@ export async function fetchOwnerSpaces(): Promise<Space[]> {
   return apiRequest<Space[]>("/spaces/owner/me", {}, true);
 }
 
-export async function fetchOwnerEnquiryNotifications(): Promise<OwnerEnquiryNotification[]> {
-  return apiRequest<OwnerEnquiryNotification[]>("/spaces/owner/enquiries", {}, true);
+export async function fetchMyNotifications(): Promise<AppNotification[]> {
+  return apiRequest<AppNotification[]>("/notifications/me", {}, true);
+}
+
+export async function markNotificationRead(notificationId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/notifications/${notificationId}/read`,
+    {
+      method: "PATCH"
+    },
+    true
+  );
+}
+
+export async function respondToNotification(
+  notificationId: string,
+  decision: "approved" | "rejected"
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/notifications/${notificationId}/respond`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ decision })
+    },
+    true
+  );
+}
+
+export async function createSpaceLead(payload: {
+  spaceId: string;
+  action: "quote" | "tour";
+}): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/notifications/spaces/${payload.spaceId}/lead`,
+    {
+      method: "POST",
+      body: JSON.stringify({ action: payload.action })
+    },
+    true
+  );
+}
+
+export async function geocodeSpaceAddress(payload: {
+  address: string;
+  city: string;
+  state: string;
+}): Promise<{ latitude: number; longitude: number }> {
+  return apiRequest<{ latitude: number; longitude: number }>(
+    "/spaces/geocode",
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
+    },
+    true
+  );
 }
 
 export async function uploadSpacePhotos(files: File[]): Promise<string[]> {

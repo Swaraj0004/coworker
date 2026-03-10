@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+ï»¿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { INDIA_STATE_AND_UT_OPTIONS, getCitiesForRegion } from "../../data/indiaLocations";
 import {
   deleteOwnerSpace,
   fetchOwnerSpaces,
@@ -61,6 +62,10 @@ function MySpaces() {
     [spaces]
   );
 
+  const editCityOptions = useMemo(() => {
+    return editForm ? getCitiesForRegion(editForm.state) : [];
+  }, [editForm]);
+
   const loadSpaces = async () => {
     try {
       setLoading(true);
@@ -106,6 +111,18 @@ function MySpaces() {
       selectedAmenities: editForm.selectedAmenities.includes(item)
         ? editForm.selectedAmenities.filter((x) => x !== item)
         : [...editForm.selectedAmenities, item]
+    });
+  };
+
+  const handleEditStateChange = (state: string) => {
+    if (!editForm) {
+      return;
+    }
+
+    setEditForm({
+      ...editForm,
+      state,
+      city: ""
     });
   };
 
@@ -190,7 +207,7 @@ function MySpaces() {
     <section className="surface-card section" style={{ width: "100%", margin: 0 }}>
       <h1 className="page-title">My Coworking Spaces</h1>
       <p className="page-subtitle">
-        {spaces.length} listing(s) • {totalSeats} available seat(s)
+        {spaces.length} listing(s) | {totalSeats} available seat(s)
       </p>
 
       {error && <p className="error-text">{error}</p>}
@@ -219,19 +236,34 @@ function MySpaces() {
                       </label>
 
                       <label className="field">
-                        City
-                        <input
-                          value={editForm.city}
-                          onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                        />
+                        State / Union Territory
+                        <select
+                          value={editForm.state}
+                          onChange={(e) => handleEditStateChange(e.target.value)}
+                        >
+                          <option value="">Select state or union territory</option>
+                          {INDIA_STATE_AND_UT_OPTIONS.map((state) => (
+                            <option key={state} value={state}>
+                              {state}
+                            </option>
+                          ))}
+                        </select>
                       </label>
 
                       <label className="field">
-                        State
-                        <input
-                          value={editForm.state}
-                          onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
-                        />
+                        City
+                        <select
+                          value={editForm.city}
+                          onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                          disabled={!editForm.state}
+                        >
+                          <option value="">Select city</option>
+                          {editCityOptions.map((city) => (
+                            <option key={`${editForm.state}-${city.name}`} value={city.name}>
+                              {city.name}
+                            </option>
+                          ))}
+                        </select>
                       </label>
 
                       <label className="field">
@@ -401,11 +433,11 @@ function MySpaces() {
 
                 <p style={{ margin: "0.25rem 0" }}>Base Price: Rs {space.pricePerMonth}/month</p>
                 <p style={{ margin: "0.25rem 0" }}>Available Seats: {space.availableSeats}</p>
-                <p>
-                  <Link to={`/space/${space._id}`}>View public details</Link>
-                </p>
 
                 <div className="row">
+                  <Link to={`/space/${space._id}`} className="btn btn-primary">
+                    View Place
+                  </Link>
                   <button className="btn btn-outline" onClick={() => startEdit(space)}>
                     Edit Details
                   </button>
@@ -423,3 +455,4 @@ function MySpaces() {
 }
 
 export default MySpaces;
+
