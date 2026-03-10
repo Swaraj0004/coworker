@@ -8,6 +8,8 @@ import {
   requestForgotPasswordOtp,
   resetPassword,
   sendSignupOtp,
+  updateMyProfile,
+  updateMySecurity,
   verifyForgotPasswordOtp,
   verifySignupOtp
 } from "../controllers/auth.controller";
@@ -15,6 +17,8 @@ import {
 const router = Router();
 
 router.get("/me", authenticate, getMe);
+router.put("/me/profile", authenticate, updateMyProfile);
+router.put("/me/security", authenticate, updateMySecurity);
 router.post("/check-username", checkUsername);
 router.post("/send-signup-otp", sendSignupOtp);
 router.post("/verify-signup-otp", verifySignupOtp);

@@ -10,11 +10,19 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api
 export interface IndiaCityStat {
   city: string;
   state: string;
-  tier: "Tier 1" | "Tier 2";
   avgPrice: number;
   spaces: number;
   lat: number;
   lng: number;
+}
+
+export interface OwnerEnquiryNotification {
+  id: string;
+  type: "enquiry";
+  title: string;
+  message: string;
+  spaceId: string;
+  createdAt: string;
 }
 
 async function apiRequest<T>(
@@ -24,7 +32,7 @@ async function apiRequest<T>(
 ): Promise<T> {
   const headers = new Headers(options.headers || {});
 
-  if (!headers.has("Content-Type") && options.body) {
+  if (!headers.has("Content-Type") && options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -67,6 +75,30 @@ export async function fetchSpaceById(id: string): Promise<Space> {
 
 export async function fetchOwnerSpaces(): Promise<Space[]> {
   return apiRequest<Space[]>("/spaces/owner/me", {}, true);
+}
+
+export async function fetchOwnerEnquiryNotifications(): Promise<OwnerEnquiryNotification[]> {
+  return apiRequest<OwnerEnquiryNotification[]>("/spaces/owner/enquiries", {}, true);
+}
+
+export async function uploadSpacePhotos(files: File[]): Promise<string[]> {
+  if (!files.length) {
+    return [];
+  }
+
+  const formData = new FormData();
+  files.forEach((file) => formData.append("photos", file));
+
+  const response = await apiRequest<{ urls: string[] }>(
+    "/spaces/upload-photo",
+    {
+      method: "POST",
+      body: formData
+    },
+    true
+  );
+
+  return response.urls || [];
 }
 
 export async function createSpace(payload: CreateSpacePayload): Promise<Space> {

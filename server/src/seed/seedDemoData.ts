@@ -9,22 +9,20 @@ dotenv.config();
 
 type CityConfig = {
   name: string;
-  state: string;
-  tier: "Tier 1" | "Tier 2";
-  lat: number;
+  state: string;  lat: number;
   lng: number;
   count: number;
   priceBase: number;
 };
 
 const cityConfigs: CityConfig[] = [
-  { name: "Mumbai", state: "Maharashtra", tier: "Tier 1", lat: 19.076, lng: 72.8777, count: 22, priceBase: 12500 },
-  { name: "Bengaluru", state: "Karnataka", tier: "Tier 1", lat: 12.9716, lng: 77.5946, count: 24, priceBase: 11800 },
-  { name: "Hyderabad", state: "Telangana", tier: "Tier 1", lat: 17.385, lng: 78.4867, count: 19, priceBase: 10100 },
+  { name: "Mumbai", state: "Maharashtra", lat: 19.076, lng: 72.8777, count: 22, priceBase: 12500 },
+  { name: "Bengaluru", state: "Karnataka", lat: 12.9716, lng: 77.5946, count: 24, priceBase: 11800 },
+  { name: "Hyderabad", state: "Telangana", lat: 17.385, lng: 78.4867, count: 19, priceBase: 10100 },
 
-  { name: "Nagpur", state: "Maharashtra", tier: "Tier 2", lat: 21.1458, lng: 79.0882, count: 12, priceBase: 5600 },
-  { name: "Jaipur", state: "Rajasthan", tier: "Tier 2", lat: 26.9124, lng: 75.7873, count: 11, priceBase: 6100 },
-  { name: "Indore", state: "Madhya Pradesh", tier: "Tier 2", lat: 22.7196, lng: 75.8577, count: 14, priceBase: 5900 }
+  { name: "Nagpur", state: "Maharashtra", lat: 21.1458, lng: 79.0882, count: 12, priceBase: 5600 },
+  { name: "Jaipur", state: "Rajasthan", lat: 26.9124, lng: 75.7873, count: 11, priceBase: 6100 },
+  { name: "Indore", state: "Madhya Pradesh", lat: 22.7196, lng: 75.8577, count: 14, priceBase: 5900 }
 ];
 
 const ownerCount = 34;
@@ -89,17 +87,41 @@ function pickMany<T>(arr: T[], count: number): T[] {
 }
 
 function createOwnerDocs() {
-  return Array.from({ length: ownerCount }, (_, idx) => ({
+  const owners = Array.from({ length: ownerCount }, (_, idx) => ({
     name: `Owner ${String(idx + 1).padStart(2, "0")}`,
     email: `owner${idx + 1}@spacenow.dev`,
-    role: "owner" as const
+    username: `owner${idx + 1}`,
+    mobile: `900000${String(idx + 1).padStart(4, "0")}`,
+    city: "Mumbai",
+    state: "Maharashtra",
+    role: "owner" as const,
+    officeAddress: `Business Park ${idx + 1}, Mumbai`,
+    officeNumber: `022${String(400000 + idx).padStart(6, "0")}`
   }));
+
+  owners.unshift({
+    name: "Swaraj Blubox",
+    email: "swaraj@blubox",
+    username: "swaraj_blubox",
+    mobile: "9876543210",
+    city: "Nagpur",
+    state: "Maharashtra",
+    role: "owner" as const,
+    officeAddress: "Blubox HQ, Nagpur",
+    officeNumber: "07122334455"
+  });
+
+  return owners;
 }
 
 function createUserDocs() {
   return Array.from({ length: userCount }, (_, idx) => ({
     name: `User ${String(idx + 1).padStart(2, "0")}`,
     email: `user${idx + 1}@spacenow.dev`,
+    username: `user${idx + 1}`,
+    mobile: `800000${String(idx + 1).padStart(4, "0")}`,
+    city: "Pune",
+    state: "Maharashtra",
     role: "user" as const
   }));
 }
@@ -118,17 +140,22 @@ async function seedDemoData() {
     await Promise.all([
       Review.deleteMany({}),
       Space.deleteMany({}),
-      User.deleteMany({ email: { $regex: "@(spacenow\\.dev|coworker\\.dev)$", $options: "i" } })
+      User.deleteMany({
+        $or: [
+          { email: { $regex: "@(spacenow\\.dev|coworker\\.dev)$", $options: "i" } },
+          { email: "swaraj@blubox" }
+        ]
+      })
     ]);
 
     const hashedPassword = await bcrypt.hash("Pass@123", 10);
 
     const ownerDocs = await User.insertMany(
-      createOwnerDocs().map((owner) => ({ ...owner, password: hashedPassword }))
+      createOwnerDocs().map((owner) => ({ ...owner, password: hashedPassword, emailVerified: true }))
     );
 
     const userDocs = await User.insertMany(
-      createUserDocs().map((user) => ({ ...user, password: hashedPassword }))
+      createUserDocs().map((user) => ({ ...user, password: hashedPassword, emailVerified: true }))
     );
 
     const remainingByCity = new Map<string, number>();
@@ -189,9 +216,7 @@ async function seedDemoData() {
             parking: Math.random() > 0.25
           },
           city: city.name,
-          state: city.state,
-          tier: city.tier,
-          address: `${randomInt(10, 780)}, ${city.name} Business District, ${city.state}`,
+          state: city.state,          address: `${randomInt(10, 780)}, ${city.name} Business District, ${city.state}`,
           overview:
             `${officeName} is designed for startups, freelancers, and distributed teams. ` +
             `You get ergonomic seating, productive ambiance, and flexible plans in ${city.name}.`,
@@ -253,9 +278,7 @@ async function seedDemoData() {
             parking: Math.random() > 0.25
           },
           city: city.name,
-          state: city.state,
-          tier: city.tier,
-          address: `${randomInt(10, 780)}, ${city.name} Business District, ${city.state}`,
+          state: city.state,          address: `${randomInt(10, 780)}, ${city.name} Business District, ${city.state}`,
           overview:
             `${officeName} supports day passes, monthly hot desks, and private cabins in ${city.name}.`,
           amenityHighlights: pickMany(amenityPool, randomInt(8, 11)),
@@ -283,6 +306,59 @@ async function seedDemoData() {
       remainingByCity.set(city.name, 0);
     }
 
+    const swarajOwner = ownerDocs.find((owner) => owner.email === "swaraj@blubox");
+    if (swarajOwner) {
+      spacesPayload.push({
+        name: "Bluebox Signature Workspace",
+        pricePerMonth: 8900,
+        availableSeats: 26,
+        location: {
+          type: "Point",
+          coordinates: [79.0882, 21.1458]
+        },
+        amenities: {
+          wifi: true,
+          ac: true,
+          parking: true
+        },
+        city: "Nagpur",
+        state: "Maharashtra",
+        address: "18, IT Park Road, Nagpur, Maharashtra",
+        overview:
+          "Bluebox Signature Workspace offers flexible desks, private cabins, and meeting rooms for teams in Nagpur.",
+        amenityHighlights: [
+          "WiFi",
+          "Air Conditioning",
+          "Parking",
+          "Meeting Rooms",
+          "Printing",
+          "Free Coffee",
+          "24x7 Access"
+        ],
+        photos: [
+          "https://picsum.photos/seed/bluebox-signature-1/1200/800",
+          "https://picsum.photos/seed/bluebox-signature-2/1200/800",
+          "https://picsum.photos/seed/bluebox-signature-3/1200/800"
+        ],
+        pricing: {
+          servicedOffice: 22800,
+          coworkingSpace: 8900,
+          privateOffice: 14900,
+          virtualOffice: 2900
+        },
+        rating: 4.7,
+        reviewCount: 18,
+        ratingBreakdown: {
+          location: 4.8,
+          wifi: 4.7,
+          productivity: 4.6,
+          comfort: 4.7,
+          community: 4.5,
+          amenities: 4.6
+        },
+        ownerId: swarajOwner._id
+      });
+    }
     const insertedSpaces = await Space.insertMany(spacesPayload);
 
     const reviewPayload = insertedSpaces.flatMap((space) => {
@@ -303,9 +379,7 @@ async function seedDemoData() {
     await Review.insertMany(reviewPayload);
 
     const summary = cityConfigs.map((city) => ({
-      city: city.name,
-      tier: city.tier,
-      total: insertedSpaces.filter((s: any) => s.city === city.name).length
+      city: city.name,      total: insertedSpaces.filter((s: any) => s.city === city.name).length
     }));
 
     console.table(summary);
@@ -325,3 +399,4 @@ async function seedDemoData() {
 }
 
 seedDemoData();
+

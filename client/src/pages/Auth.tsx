@@ -110,7 +110,7 @@ function Auth() {
       if (res.user.role === "owner") {
         navigate("/owner/dashboard");
       } else {
-        navigate("/");
+        navigate("/user/dashboard");
       }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Login failed");

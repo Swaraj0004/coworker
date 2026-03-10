@@ -1,5 +1,40 @@
 const BASE_URL = "http://localhost:5000/api/auth";
 
+export interface MyProfile {
+  _id?: string;
+  name: string;
+  email: string;
+  username: string;
+  mobile: string;
+  city: string;
+  state: string;
+  role: "user" | "owner" | "admin";
+  gender?: "male" | "female" | "other" | "prefer_not_to_say";
+  dob?: string;
+  bio?: string;
+  addressLine?: string;
+  country?: string;
+  postalCode?: string;
+  officeAddress?: string;
+  officeNumber?: string;
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  username?: string;
+  mobile?: string;
+  city?: string;
+  state?: string;
+  gender?: "male" | "female" | "other" | "prefer_not_to_say" | "";
+  dob?: string;
+  bio?: string;
+  addressLine?: string;
+  country?: string;
+  postalCode?: string;
+  officeAddress?: string;
+  officeNumber?: string;
+}
+
 async function parseResponse(res: Response) {
   const contentType = res.headers.get("content-type") || "";
   const isJson = contentType.includes("application/json");
@@ -7,7 +42,7 @@ async function parseResponse(res: Response) {
 
   if (!res.ok) {
     const fallback = res.statusText || `HTTP ${res.status}`;
-    throw new Error(data.message || fallback || "Request failed");
+    throw new Error((data as { message?: string }).message || fallback || "Request failed");
   }
 
   return data;
@@ -21,6 +56,17 @@ async function safeFetch(input: RequestInfo | URL, init?: RequestInit) {
   }
 }
 
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  return {
+    Authorization: `Bearer ${token}`
+  };
+}
+
 export async function loginUser(data: { identifier: string; password: string }) {
   const res = await safeFetch(`${BASE_URL}/login`, {
     method: "POST",
@@ -31,16 +77,39 @@ export async function loginUser(data: { identifier: string; password: string }) 
   return parseResponse(res);
 }
 
-export async function fetchMyProfile() {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    throw new Error("Not authenticated");
-  }
-
+export async function fetchMyProfile(): Promise<MyProfile> {
   const res = await safeFetch(`${BASE_URL}/me`, {
+    headers: getAuthHeaders()
+  });
+
+  return parseResponse(res);
+}
+
+export async function updateMyProfile(data: UpdateProfilePayload) {
+  const res = await safeFetch(`${BASE_URL}/me/profile`, {
+    method: "PUT",
     headers: {
-      Authorization: `Bearer ${token}`
-    }
+      "Content-Type": "application/json",
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify(data)
+  });
+
+  return parseResponse(res);
+}
+
+export async function updateMySecurity(data: {
+  currentPassword?: string;
+  newPassword?: string;
+  newMobile?: string;
+}) {
+  const res = await safeFetch(`${BASE_URL}/me/security`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify(data)
   });
 
   return parseResponse(res);

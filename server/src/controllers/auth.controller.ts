@@ -23,11 +23,7 @@ const createOtp = async (email: string, purpose: "signup" | "forgot_password") =
   return code;
 };
 
-const verifyOtp = async (
-  email: string,
-  purpose: "signup" | "forgot_password",
-  otp: string
-) => {
+const verifyOtp = async (email: string, purpose: "signup" | "forgot_password", otp: string) => {
   const record = await OtpCode.findOne({
     email,
     purpose,
@@ -56,6 +52,183 @@ export const getMe = async (req: AuthenticatedRequest, res: Response) => {
   }
 
   return res.json(user);
+};
+
+export const updateMyProfile = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const {
+    name,
+    username,
+    mobile,
+    city,
+    state,
+    gender,
+    dob,
+    bio,
+    addressLine,
+    country,
+    postalCode,
+    officeAddress,
+    officeNumber
+  } = req.body;
+
+  if (name !== undefined) {
+    if (!String(name).trim()) {
+      return res.status(400).json({ message: "Name cannot be empty" });
+    }
+    user.name = String(name).trim();
+  }
+
+  if (username !== undefined) {
+    const normalizedUsername = normalizeUsername(String(username));
+    if (normalizedUsername.length < 3) {
+      return res.status(400).json({ message: "Username must be at least 3 characters" });
+    }
+
+    if (normalizedUsername !== user.username) {
+      const existingUsername = await User.findOne({ username: normalizedUsername, _id: { $ne: user._id } });
+      if (existingUsername) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+    }
+
+    user.username = normalizedUsername;
+  }
+
+  if (mobile !== undefined) {
+    const nextMobile = String(mobile).trim();
+    if (!nextMobile) {
+      return res.status(400).json({ message: "Mobile cannot be empty" });
+    }
+    user.mobile = nextMobile;
+  }
+
+  if (city !== undefined) {
+    const nextCity = String(city).trim();
+    if (!nextCity) {
+      return res.status(400).json({ message: "City cannot be empty" });
+    }
+    user.city = nextCity;
+  }
+
+  if (state !== undefined) {
+    const nextState = String(state).trim();
+    if (!nextState) {
+      return res.status(400).json({ message: "State cannot be empty" });
+    }
+    user.state = nextState;
+  }
+
+  if (gender !== undefined) {
+    const allowed = ["male", "female", "other", "prefer_not_to_say"];
+    if (gender && !allowed.includes(String(gender))) {
+      return res.status(400).json({ message: "Invalid gender value" });
+    }
+    user.gender = gender ? String(gender) as "male" | "female" | "other" | "prefer_not_to_say" : undefined;
+  }
+
+  if (dob !== undefined) {
+    if (!dob) {
+      user.dob = undefined;
+    } else {
+      const parsedDob = new Date(dob);
+      if (Number.isNaN(parsedDob.getTime())) {
+        return res.status(400).json({ message: "Invalid date of birth" });
+      }
+      user.dob = parsedDob;
+    }
+  }
+
+  if (bio !== undefined) {
+    user.bio = String(bio || "").trim() || undefined;
+  }
+
+  if (addressLine !== undefined) {
+    user.addressLine = String(addressLine || "").trim() || undefined;
+  }
+
+  if (country !== undefined) {
+    user.country = String(country || "").trim() || undefined;
+  }
+
+  if (postalCode !== undefined) {
+    user.postalCode = String(postalCode || "").trim() || undefined;
+  }
+
+  if (user.role === "owner") {
+    if (officeAddress !== undefined) {
+      user.officeAddress = String(officeAddress || "").trim() || undefined;
+    }
+
+    if (officeNumber !== undefined) {
+      user.officeNumber = String(officeNumber || "").trim() || undefined;
+    }
+  }
+
+  await user.save();
+
+  return res.json({ message: "Profile updated", user: await User.findById(user._id).select("-password") });
+};
+
+export const updateMySecurity = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const { currentPassword, newPassword, newMobile } = req.body;
+
+  if (!newPassword && !newMobile) {
+    return res.status(400).json({ message: "No security changes provided" });
+  }
+
+  if (newMobile !== undefined) {
+    const nextMobile = String(newMobile).trim();
+    if (!nextMobile) {
+      return res.status(400).json({ message: "Mobile cannot be empty" });
+    }
+    user.mobile = nextMobile;
+  }
+
+  if (newPassword !== undefined) {
+    if (!currentPassword) {
+      return res.status(400).json({ message: "Current password is required" });
+    }
+
+    const isMatch = await bcrypt.compare(String(currentPassword), user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    if (!PASSWORD_REGEX.test(String(newPassword))) {
+      return res.status(400).json({
+        message:
+          "Password must be 8+ chars with uppercase, lowercase, number and special character"
+      });
+    }
+
+    user.password = await bcrypt.hash(String(newPassword), 10);
+  }
+
+  await user.save();
+
+  if (newPassword !== undefined) {
+    await sendPasswordChangedEmail(user.email);
+  }
+
+  return res.json({ message: "Security settings updated", user: await User.findById(user._id).select("-password") });
 };
 
 export const checkUsername = async (req: Request, res: Response) => {

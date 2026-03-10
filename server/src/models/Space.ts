@@ -15,7 +15,6 @@ interface SpaceDocument extends Document {
   };
   city?: string;
   state?: string;
-  tier?: "Tier 1" | "Tier 2";
   address?: string;
   overview?: string;
   amenityHighlights?: string[];
@@ -43,6 +42,8 @@ interface SpaceDocument extends Document {
     isFake?: boolean;
     confidence?: number;
   }>;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const spaceSchema = new Schema<SpaceDocument>(
@@ -68,7 +69,6 @@ const spaceSchema = new Schema<SpaceDocument>(
     },
     city: { type: String },
     state: { type: String },
-    tier: { type: String, enum: ["Tier 1", "Tier 2"] },
     address: { type: String },
     overview: { type: String },
     amenityHighlights: [{ type: String }],

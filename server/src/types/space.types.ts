@@ -25,7 +25,6 @@ export interface Space {
   ownerId?: string;
   city?: string;
   state?: string;
-  tier?: "Tier 1" | "Tier 2";
   address?: string;
   overview?: string;
   amenityHighlights?: string[];

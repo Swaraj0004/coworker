@@ -80,12 +80,14 @@ function SpaceDetails() {
     "Printing"
   ];
 
-  const gallery = space.photos && space.photos.length > 0 ? space.photos : [
-    "https://picsum.photos/seed/default-1/1200/800",
-    "https://picsum.photos/seed/default-2/1200/800",
-    "https://picsum.photos/seed/default-3/1200/800",
-    "https://picsum.photos/seed/default-4/1200/800"
-  ];
+  const gallery = space.photos && space.photos.length > 0
+    ? space.photos
+    : [
+        "https://picsum.photos/seed/default-1/1200/800",
+        "https://picsum.photos/seed/default-2/1200/800",
+        "https://picsum.photos/seed/default-3/1200/800",
+        "https://picsum.photos/seed/default-4/1200/800"
+      ];
 
   const rating = space.rating || 4.6;
 
@@ -104,7 +106,7 @@ function SpaceDetails() {
         <div>
           <h1 className="page-title">Coworking Space: {space.name}</h1>
           <p className="page-subtitle">
-            {space.city}, {space.state} {space.tier ? `• ${space.tier}` : ""}
+            {space.city}, {space.state}
           </p>
 
           <h3>Coworking Space Amenities</h3>

@@ -37,7 +37,6 @@ export interface Space {
   amenities: Amenities;
   city?: string;
   state?: string;
-  tier?: "Tier 1" | "Tier 2";
   address?: string;
   overview?: string;
   amenityHighlights?: string[];
@@ -68,6 +67,18 @@ export interface CreateSpacePayload {
   availableSeats: number;
   latitude: number;
   longitude: number;
+  city?: string;
+  state?: string;
+  address?: string;
+  overview?: string;
+  amenityHighlights?: string[];
+  photos?: string[];
+  pricing?: {
+    servicedOffice?: number;
+    coworkingSpace?: number;
+    privateOffice?: number;
+    virtualOffice?: number;
+  };
   amenities: Amenities;
 }
 
@@ -75,5 +86,17 @@ export interface UpdateSpacePayload {
   name?: string;
   pricePerMonth?: number;
   availableSeats?: number;
+  city?: string;
+  state?: string;
+  address?: string;
+  overview?: string;
+  amenityHighlights?: string[];
+  photos?: string[];
+  pricing?: {
+    servicedOffice?: number;
+    coworkingSpace?: number;
+    privateOffice?: number;
+    virtualOffice?: number;
+  };
   amenities?: Amenities;
 }

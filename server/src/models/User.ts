@@ -10,6 +10,12 @@ export interface UserDocument extends Document {
   password: string;
   role: "user" | "owner" | "admin";
   emailVerified: boolean;
+  gender?: "male" | "female" | "other" | "prefer_not_to_say";
+  dob?: Date;
+  bio?: string;
+  addressLine?: string;
+  country?: string;
+  postalCode?: string;
   officeAddress?: string;
   officeNumber?: string;
 }
@@ -29,6 +35,15 @@ const userSchema = new Schema<UserDocument>(
       default: "user"
     },
     emailVerified: { type: Boolean, default: false },
+    gender: {
+      type: String,
+      enum: ["male", "female", "other", "prefer_not_to_say"]
+    },
+    dob: { type: Date },
+    bio: { type: String, trim: true },
+    addressLine: { type: String, trim: true },
+    country: { type: String, trim: true },
+    postalCode: { type: String, trim: true },
     officeAddress: { type: String },
     officeNumber: { type: String }
   },
