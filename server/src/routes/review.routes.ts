@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { createReview, getReviewsBySpace } from "../controllers/review.controller";
-import { authenticate } from "../middleware/auth.middleware";
+import { attachUserIfPresent, verifyToken } from "../middleware/auth.middleware";
 
 const router = Router();
 
-router.get("/:spaceId", getReviewsBySpace);
-router.post("/", authenticate, createReview);
+router.get("/:spaceId", attachUserIfPresent, getReviewsBySpace);
+router.post("/", verifyToken, createReview);
 
 export default router;

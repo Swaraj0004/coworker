@@ -18,6 +18,7 @@ export interface UserDocument extends Document {
   postalCode?: string;
   officeAddress?: string;
   officeNumber?: string;
+  ownerVerificationStatus?: "pending" | "verified" | "rejected";
 }
 
 const userSchema = new Schema<UserDocument>(
@@ -45,7 +46,11 @@ const userSchema = new Schema<UserDocument>(
     country: { type: String, trim: true },
     postalCode: { type: String, trim: true },
     officeAddress: { type: String },
-    officeNumber: { type: String }
+    officeNumber: { type: String },
+    ownerVerificationStatus: {
+      type: String,
+      enum: ["pending", "verified", "rejected"]
+    }
   },
   { timestamps: true }
 );

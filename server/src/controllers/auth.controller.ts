@@ -1,12 +1,12 @@
 import bcrypt from "bcryptjs";
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../config/jwt";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import OtpCode from "../models/OtpCode";
 import User from "../models/User";
 import { sendOtpEmail, sendPasswordChangedEmail } from "../services/email.service";
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret";
 const OTP_EXP_MINUTES = 10;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
@@ -350,7 +350,8 @@ export const register = async (req: Request, res: Response) => {
     role: selectedRole,
     emailVerified: true,
     officeAddress: selectedRole === "owner" ? officeAddress : undefined,
-    officeNumber: selectedRole === "owner" ? officeNumber : undefined
+    officeNumber: selectedRole === "owner" ? officeNumber : undefined,
+    ownerVerificationStatus: selectedRole === "owner" ? "pending" : undefined
   });
 
   return res.json({ message: "Registered successfully" });

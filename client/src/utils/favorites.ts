@@ -1,10 +1,15 @@
 import type { Space } from "../types/space";
+import { getCurrentAuthScope } from "./auth";
 
 const STORAGE_KEY = "favorite_spaces";
 
+function getFavoritesKey() {
+  return `${STORAGE_KEY}:${getCurrentAuthScope()}`;
+}
+
 /** Get all favorite spaces */
 export function getFavorites(): Space[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(getFavoritesKey());
   return raw ? (JSON.parse(raw) as Space[]) : [];
 }
 
@@ -26,6 +31,6 @@ export function toggleFavorite(space: Space): Space[] {
     updated = [...favorites, space];
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  localStorage.setItem(getFavoritesKey(), JSON.stringify(updated));
   return updated;
 }

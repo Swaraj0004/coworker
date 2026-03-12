@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireRole } from "../middleware/auth.middleware";
+import { attachUserIfPresent, verifyOwner, verifyToken } from "../middleware/auth.middleware";
 import { spaceImageUpload } from "../middleware/upload.middleware";
 import {
   createSpace,
@@ -18,19 +18,20 @@ const router = Router();
 
 router.get("/nearby", getNearbySpaces);
 router.get("/cities/india", getIndiaCityStats);
-router.get("/owner/me", authenticate, requireRole("owner"), getOwnerSpaces);
-router.get("/owner/enquiries", authenticate, requireRole("owner"), getOwnerEnquiryNotifications);
-router.post("/geocode", authenticate, requireRole("owner"), geocodeSpaceAddress);
+router.get("/owner", verifyToken, verifyOwner, getOwnerSpaces);
+router.get("/owner/me", verifyToken, verifyOwner, getOwnerSpaces);
+router.get("/owner/enquiries", verifyToken, verifyOwner, getOwnerEnquiryNotifications);
+router.post("/geocode", verifyToken, verifyOwner, geocodeSpaceAddress);
 router.post(
   "/upload-photo",
-  authenticate,
-  requireRole("owner"),
+  verifyToken,
+  verifyOwner,
   spaceImageUpload.array("photos", 8),
   uploadSpacePhotos
 );
-router.get("/:id", getSpaceById);
-router.post("/", authenticate, requireRole("owner"), createSpace);
-router.put("/:id", authenticate, requireRole("owner"), updateOwnerSpace);
-router.delete("/:id", authenticate, requireRole("owner"), deleteOwnerSpace);
+router.get("/:id", attachUserIfPresent, getSpaceById);
+router.post("/", verifyToken, verifyOwner, createSpace);
+router.put("/:id", verifyToken, verifyOwner, updateOwnerSpace);
+router.delete("/:id", verifyToken, verifyOwner, deleteOwnerSpace);
 
 export default router;

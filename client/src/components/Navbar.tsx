@@ -22,6 +22,11 @@ function Navbar() {
       return;
     }
 
+    if (role === "admin") {
+      navigate("/admin/dashboard");
+      return;
+    }
+
     navigate("/user/dashboard");
   };
 

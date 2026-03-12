@@ -2,6 +2,7 @@ import { Response } from "express";
 import cloudinary, { isCloudinaryConfigured } from "../config/cloudinary";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import Space from "../models/Space";
+import User from "../models/User";
 
 const normalizeStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) {
@@ -33,6 +34,80 @@ const areValidCoordinates = (latitude: number, longitude: number) => {
     longitude >= -180 &&
     longitude <= 180
   );
+};
+
+const verifiedVisibilityFilter = {
+  $or: [{ verificationStatus: "verified" }, { verificationStatus: { $exists: false } }]
+};
+
+const toRad = (value: number) => (value * Math.PI) / 180;
+
+const distanceInKm = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+  const earthRadiusKm = 6371;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const aa =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+  return earthRadiusKm * c;
+};
+
+const verifyPlaceCoordinates = async (
+  address: string | undefined,
+  city: string | undefined,
+  state: string | undefined,
+  submittedLatitude: number,
+  submittedLongitude: number
+) => {
+  const exactLocation = await geocodeIndianAddress(address, city, state);
+
+  if (!exactLocation) {
+    return {
+      status: "pending" as const,
+      score: 0,
+      source: "nominatim" as const,
+      notes: "Could not verify exact address from third-party provider."
+    };
+  }
+
+  const deltaKm = distanceInKm(
+    submittedLatitude,
+    submittedLongitude,
+    exactLocation.latitude,
+    exactLocation.longitude
+  );
+
+  if (deltaKm <= 2) {
+    return {
+      status: "verified" as const,
+      score: Math.max(0, Number((1 - deltaKm / 2).toFixed(4))),
+      source: "nominatim" as const,
+      notes: `Verified via Nominatim. Coordinate delta ${deltaKm.toFixed(2)} km.`,
+      finalLatitude: exactLocation.latitude,
+      finalLongitude: exactLocation.longitude
+    };
+  }
+
+  if (deltaKm <= 10) {
+    return {
+      status: "pending" as const,
+      score: Math.max(0, Number((1 - deltaKm / 10).toFixed(4))),
+      source: "nominatim" as const,
+      notes: `Address found but coordinate delta ${deltaKm.toFixed(2)} km. Needs admin review.`,
+      finalLatitude: exactLocation.latitude,
+      finalLongitude: exactLocation.longitude
+    };
+  }
+
+  return {
+    status: "rejected" as const,
+    score: 0,
+    source: "nominatim" as const,
+    notes: `Coordinate mismatch too high (${deltaKm.toFixed(2)} km).`,
+    finalLatitude: exactLocation.latitude,
+    finalLongitude: exactLocation.longitude
+  };
 };
 
 const geocodeIndianAddress = async (address?: string, city?: string, state?: string) => {
@@ -176,13 +251,14 @@ export const getNearbySpaces = async (req: AuthenticatedRequest, res: Response) 
     }
 
     if (radiusKm <= 0) {
-      const allSpaces = await Space.find({}).sort({ createdAt: -1 });
+      const allSpaces = await Space.find(verifiedVisibilityFilter).sort({ createdAt: -1 });
       return res.json(allSpaces);
     }
 
     const maxDistance = radiusKm * 1000;
 
     const spaces = await Space.find({
+      ...verifiedVisibilityFilter,
       location: {
         $near: {
           $geometry: {
@@ -205,7 +281,8 @@ export const getIndiaCityStats = async (_req: AuthenticatedRequest, res: Respons
     const stats = await Space.aggregate([
       {
         $match: {
-          city: { $exists: true, $ne: null }
+          city: { $exists: true, $ne: null },
+          ...verifiedVisibilityFilter
         }
       },
       {
@@ -281,6 +358,18 @@ export const getSpaceById = async (req: AuthenticatedRequest, res: Response) => 
       return res.status(404).json({ message: "Space not found" });
     }
 
+    if (space.verificationStatus && space.verificationStatus !== "verified") {
+      if (!req.user) {
+        return res.status(404).json({ message: "Space not found" });
+      }
+
+      const isOwner = String(space.ownerId || "") === req.user.id;
+      const isAdmin = req.user.role === "admin";
+      if (!isOwner && !isAdmin) {
+        return res.status(404).json({ message: "Space not found" });
+      }
+    }
+
     return res.json(space);
   } catch {
     return res.status(500).json({ message: "Server error" });
@@ -319,19 +408,34 @@ export const createSpace = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    const owner = await User.findById(req.user.id).select("role ownerVerificationStatus");
+    if (!owner || owner.role !== "owner") {
+      return res.status(403).json({ message: "Only owners can create spaces" });
+    }
+    if (owner.ownerVerificationStatus === "rejected") {
+      return res.status(403).json({ message: "Owner account is rejected by admin" });
+    }
+    if (owner.ownerVerificationStatus === "pending") {
+      return res.status(403).json({
+        message: "Owner verification pending. Admin approval is required before adding spaces."
+      });
+    }
+
     const normalizedCity = normalizeOptionalString(city);
     const normalizedState = normalizeOptionalString(state);
     const normalizedAddress = normalizeOptionalString(address);
     const fallbackLatitude = Number(latitude);
     const fallbackLongitude = Number(longitude);
-    const geocodedLocation = await geocodeIndianAddress(
+    const verification = await verifyPlaceCoordinates(
       normalizedAddress,
       normalizedCity,
-      normalizedState
+      normalizedState,
+      fallbackLatitude,
+      fallbackLongitude
     );
 
-    const finalLatitude = geocodedLocation?.latitude ?? fallbackLatitude;
-    const finalLongitude = geocodedLocation?.longitude ?? fallbackLongitude;
+    const finalLatitude = verification.finalLatitude ?? fallbackLatitude;
+    const finalLongitude = verification.finalLongitude ?? fallbackLongitude;
 
     if (!areValidCoordinates(finalLatitude, finalLongitude)) {
       return res.status(400).json({
@@ -370,10 +474,23 @@ export const createSpace = async (req: AuthenticatedRequest, res: Response) => {
         ac: Boolean(amenities?.ac),
         parking: Boolean(amenities?.parking)
       },
-      ownerId: req.user.id
+      ownerId: req.user.id,
+      verificationStatus: verification.status,
+      verificationSource: verification.source,
+      verificationScore: verification.score,
+      verifiedAt: verification.status === "verified" ? new Date() : undefined,
+      verificationNotes: verification.notes
     });
 
-    return res.status(201).json(space);
+    return res.status(201).json({
+      ...space.toObject(),
+      moderationMessage:
+        verification.status === "verified"
+          ? "Space verified and published."
+          : verification.status === "pending"
+            ? "Space saved but pending verification. It will be visible after admin approval."
+            : "Space rejected due to location mismatch. Please correct address/coordinates and resubmit."
+    });
   } catch {
     return res.status(500).json({ message: "Server error" });
   }
@@ -396,6 +513,19 @@ export const updateOwnerSpace = async (req: AuthenticatedRequest, res: Response)
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const owner = await User.findById(req.user.id).select("role ownerVerificationStatus");
+    if (!owner || owner.role !== "owner") {
+      return res.status(403).json({ message: "Only owners can update spaces" });
+    }
+    if (owner.ownerVerificationStatus === "rejected") {
+      return res.status(403).json({ message: "Owner account is rejected by admin" });
+    }
+    if (owner.ownerVerificationStatus === "pending") {
+      return res.status(403).json({
+        message: "Owner verification pending. Admin approval is required before updating spaces."
+      });
     }
 
     const {
@@ -424,7 +554,26 @@ export const updateOwnerSpace = async (req: AuthenticatedRequest, res: Response)
     const nextCity = city !== undefined ? normalizeOptionalString(city) : existingSpace.city;
     const nextState = state !== undefined ? normalizeOptionalString(state) : existingSpace.state;
     const nextAddress = address !== undefined ? normalizeOptionalString(address) : existingSpace.address;
-    const geocodedLocation = await geocodeIndianAddress(nextAddress, nextCity, nextState);
+    const nextLatitude =
+      req.body.latitude !== undefined
+        ? Number(req.body.latitude)
+        : existingSpace.location.coordinates[1];
+    const nextLongitude =
+      req.body.longitude !== undefined
+        ? Number(req.body.longitude)
+        : existingSpace.location.coordinates[0];
+
+    if (!areValidCoordinates(nextLatitude, nextLongitude)) {
+      return res.status(400).json({ message: "Invalid latitude or longitude" });
+    }
+
+    const verification = await verifyPlaceCoordinates(
+      nextAddress,
+      nextCity,
+      nextState,
+      nextLatitude,
+      nextLongitude
+    );
 
     const space = await Space.findOneAndUpdate(
       {
@@ -470,14 +619,15 @@ export const updateOwnerSpace = async (req: AuthenticatedRequest, res: Response)
               }
             }
           : {}),
-        ...(geocodedLocation
-          ? {
-              location: {
-                type: "Point",
-                coordinates: [geocodedLocation.longitude, geocodedLocation.latitude]
-              }
-            }
-          : {})
+        location: {
+          type: "Point",
+          coordinates: [verification.finalLongitude ?? nextLongitude, verification.finalLatitude ?? nextLatitude]
+        },
+        verificationStatus: verification.status,
+        verificationSource: verification.source,
+        verificationScore: verification.score,
+        verifiedAt: verification.status === "verified" ? new Date() : undefined,
+        verificationNotes: verification.notes
       },
       { new: true }
     );

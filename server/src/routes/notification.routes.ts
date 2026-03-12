@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireRole } from "../middleware/auth.middleware";
+import { requireRole, verifyToken } from "../middleware/auth.middleware";
 import {
   createSpaceLead,
   getMyNotifications,
@@ -9,9 +9,9 @@ import {
 
 const router = Router();
 
-router.get("/me", authenticate, getMyNotifications);
-router.patch("/:id/read", authenticate, markNotificationRead);
-router.patch("/:id/respond", authenticate, requireRole("owner", "admin"), respondToLeadNotification);
-router.post("/spaces/:id/lead", authenticate, requireRole("user", "owner"), createSpaceLead);
+router.get("/me", verifyToken, getMyNotifications);
+router.patch("/:id/read", verifyToken, markNotificationRead);
+router.patch("/:id/respond", verifyToken, requireRole("owner", "admin"), respondToLeadNotification);
+router.post("/spaces/:id/lead", verifyToken, requireRole("user", "owner"), createSpaceLead);
 
 export default router;

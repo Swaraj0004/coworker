@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import AdminRoute from "./components/AdminRoute";
 import OwnerRoute from "./components/OwnerRoute";
 import UserRoute from "./components/UserRoute";
+import AdminLayout from "./layouts/AdminLayout";
 import MainLayout from "./layouts/MainLayout";
 import OwnerLayout from "./layouts/OwnerLayout";
 import UserLayout from "./layouts/UserLayout";
@@ -11,6 +13,10 @@ import Favorites from "./pages/Favorites";
 import Home from "./pages/Home";
 import HowItWorks from "./pages/HowItWorks";
 import SpaceDetails from "./pages/SpaceDetails";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOwners from "./pages/admin/AdminOwners";
+import AdminReviews from "./pages/admin/AdminReviews";
+import AdminSpaces from "./pages/admin/AdminSpaces";
 import AddSpace from "./pages/owner/AddSpace";
 import MySpaces from "./pages/owner/MySpaces";
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
@@ -34,6 +40,21 @@ function App() {
           <Route path="/space/:id" element={<SpaceDetails />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/register" element={<Auth />} />
+        </Route>
+
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="spaces" element={<AdminSpaces />} />
+          <Route path="reviews" element={<AdminReviews />} />
+          <Route path="owners" element={<AdminOwners />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
         <Route

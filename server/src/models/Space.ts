@@ -36,6 +36,11 @@ interface SpaceDocument extends Document {
     amenities?: number;
   };
   ownerId?: Types.ObjectId;
+  verificationStatus?: "pending" | "verified" | "rejected";
+  verificationSource?: "nominatim";
+  verificationScore?: number;
+  verifiedAt?: Date;
+  verificationNotes?: string;
   reviews?: Array<{
     comment: string;
     rating: number;
@@ -93,6 +98,17 @@ const spaceSchema = new Schema<SpaceDocument>(
       type: Schema.Types.ObjectId,
       ref: "User"
     },
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "verified", "rejected"]
+    },
+    verificationSource: {
+      type: String,
+      enum: ["nominatim"]
+    },
+    verificationScore: { type: Number },
+    verifiedAt: { type: Date },
+    verificationNotes: { type: String },
     reviews: [
       {
         comment: String,

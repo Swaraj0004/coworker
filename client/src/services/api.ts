@@ -54,6 +54,14 @@ async function apiRequest<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("username");
+      localStorage.removeItem("name");
+      localStorage.removeItem("email");
+    }
     throw new Error(errorData.message || "Request failed");
   }
 

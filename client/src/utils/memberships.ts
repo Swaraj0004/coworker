@@ -1,6 +1,11 @@
 import type { Space } from "../types/space";
+import { getCurrentAuthScope } from "./auth";
 
 const STORAGE_KEY = "user_memberships";
+
+function getMembershipsKey() {
+  return `${STORAGE_KEY}:${getCurrentAuthScope()}`;
+}
 
 export type MembershipPlan =
   | "coworking-space"
@@ -32,12 +37,12 @@ export function formatMembershipPlan(plan: MembershipPlan): string {
 }
 
 export function getUserMemberships(): UserMembership[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(getMembershipsKey());
   return raw ? (JSON.parse(raw) as UserMembership[]) : [];
 }
 
 function saveUserMemberships(data: UserMembership[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(getMembershipsKey(), JSON.stringify(data));
 }
 
 function getPlanPrice(space: Space, plan: MembershipPlan): number {

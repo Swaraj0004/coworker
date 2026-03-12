@@ -105,10 +105,15 @@ function Auth() {
 
       localStorage.setItem("token", res.token);
       localStorage.setItem("role", res.user.role);
+      localStorage.setItem("userId", String(res.user.id || ""));
+      localStorage.setItem("name", res.user.name || "");
+      localStorage.setItem("email", res.user.email || "");
       localStorage.setItem("username", res.user.username || "");
 
       if (res.user.role === "owner") {
         navigate("/owner/dashboard");
+      } else if (res.user.role === "admin") {
+        navigate("/admin/dashboard");
       } else {
         navigate("/user/dashboard");
       }

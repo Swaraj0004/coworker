@@ -41,6 +41,14 @@ async function parseResponse(res: Response) {
   const data = isJson ? await res.json().catch(() => ({})) : {};
 
   if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("username");
+      localStorage.removeItem("name");
+      localStorage.removeItem("email");
+    }
     const fallback = res.statusText || `HTTP ${res.status}`;
     throw new Error((data as { message?: string }).message || fallback || "Request failed");
   }
