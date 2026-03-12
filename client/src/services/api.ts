@@ -4,6 +4,7 @@ import type {
   Space,
   UpdateSpacePayload
 } from "../types/space";
+import type { Booking, OwnerAnalytics } from "../types/booking";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
@@ -14,6 +15,15 @@ export interface IndiaCityStat {
   spaces: number;
   lat: number;
   lng: number;
+}
+
+export interface NearbySpacesResponse {
+  items: Space[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
 }
 
 export interface AppNotification {
@@ -71,9 +81,42 @@ async function apiRequest<T>(
 export async function fetchNearbySpaces(
   lat: number,
   lng: number,
-  radiusKm = 0
-): Promise<Space[]> {
-  return apiRequest<Space[]>(`/spaces/nearby?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`);
+  options?: {
+    radiusKm?: number;
+    page?: number;
+    limit?: number;
+    priceMin?: number;
+    priceMax?: number;
+    minRating?: number;
+    minAvailableSeats?: number;
+    bounds?: {
+      swLat: number;
+      swLng: number;
+      neLat: number;
+      neLng: number;
+    };
+  }
+): Promise<NearbySpacesResponse> {
+  const radiusKm = options?.radiusKm ?? 0;
+  const page = options?.page ?? 1;
+  const limit = options?.limit ?? 50;
+  const priceMinQuery =
+    options?.priceMin !== undefined ? `&priceMin=${options.priceMin}` : "";
+  const priceMaxQuery =
+    options?.priceMax !== undefined ? `&priceMax=${options.priceMax}` : "";
+  const minRatingQuery =
+    options?.minRating !== undefined ? `&minRating=${options.minRating}` : "";
+  const minSeatsQuery =
+    options?.minAvailableSeats !== undefined
+      ? `&minAvailableSeats=${options.minAvailableSeats}`
+      : "";
+  const boundsQuery = options?.bounds
+    ? `&swLat=${options.bounds.swLat}&swLng=${options.bounds.swLng}&neLat=${options.bounds.neLat}&neLng=${options.bounds.neLng}`
+    : "";
+
+  return apiRequest<NearbySpacesResponse>(
+    `/spaces/nearby?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}&page=${page}&limit=${limit}${priceMinQuery}${priceMaxQuery}${minRatingQuery}${minSeatsQuery}${boundsQuery}`
+  );
 }
 
 export async function fetchIndiaCityStats(): Promise<IndiaCityStat[]> {
@@ -128,6 +171,46 @@ export async function createSpaceLead(payload: {
     },
     true
   );
+}
+
+export async function createBooking(payload: {
+  spaceId: string;
+  date: string;
+  seatsBooked: number;
+}): Promise<Booking> {
+  return apiRequest<Booking>(
+    `/bookings/spaces/${payload.spaceId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        date: payload.date,
+        seatsBooked: payload.seatsBooked
+      })
+    },
+    true
+  );
+}
+
+export async function fetchMyBookings(): Promise<Booking[]> {
+  return apiRequest<Booking[]>("/bookings/me", {}, true);
+}
+
+export async function fetchOwnerBookings(): Promise<Booking[]> {
+  return apiRequest<Booking[]>("/bookings/owner/me", {}, true);
+}
+
+export async function cancelBooking(bookingId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/bookings/${bookingId}/cancel`,
+    {
+      method: "PATCH"
+    },
+    true
+  );
+}
+
+export async function fetchOwnerAnalytics(): Promise<OwnerAnalytics> {
+  return apiRequest<OwnerAnalytics>("/bookings/owner/analytics", {}, true);
 }
 
 export async function geocodeSpaceAddress(payload: {

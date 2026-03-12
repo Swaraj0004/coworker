@@ -1,9 +1,10 @@
-import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+﻿import L from "leaflet";
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import type { LatLngExpression } from "leaflet";
 import type { Space } from "../types/space";
-import SpacePopup from "./SpacePopup";
 import { getMarkerIcon } from "../utils/getMarkerIcon";
 import { useEffect } from "react";
+import "leaflet.markercluster";
 
 interface MapViewProps {
   lat: number;
@@ -21,6 +22,59 @@ function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function ClusteredMarkers({ spaces }: { spaces: Space[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const clusterGroup = (L as any).markerClusterGroup({
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      removeOutsideVisibleBounds: true,
+      disableClusteringAtZoom: 16
+    });
+
+    spaces.forEach((space) => {
+      const marker = L.marker(
+        [space.location.coordinates[1], space.location.coordinates[0]],
+        { icon: getMarkerIcon(space) }
+      );
+
+      const safeName = escapeHtml(space.name);
+      const safeCity = escapeHtml(space.city || "");
+      const safeState = escapeHtml(space.state || "");
+
+      marker.bindPopup(
+        `<div style="min-width:220px">
+          <h4 style="margin:0 0 6px 0">${safeName}</h4>
+          <p style="margin:0 0 6px 0">Rs ${space.pricePerMonth}/month</p>
+          <p style="margin:0 0 10px 0">${safeCity}${safeCity && safeState ? ", " : ""}${safeState}</p>
+          <a href="/space/${space._id}" style="font-weight:600">View details</a>
+        </div>`
+      );
+
+      clusterGroup.addLayer(marker);
+    });
+
+    map.addLayer(clusterGroup);
+
+    return () => {
+      map.removeLayer(clusterGroup);
+      clusterGroup.clearLayers();
+    };
+  }, [map, spaces]);
+
+  return null;
+}
+
 function MapView({ lat, lng, spaces }: MapViewProps) {
   const center: LatLngExpression = [lat, lng];
 
@@ -30,7 +84,7 @@ function MapView({ lat, lng, spaces }: MapViewProps) {
 
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="� OpenStreetMap contributors"
+        attribution="© OpenStreetMap contributors"
       />
 
       <CircleMarker
@@ -41,17 +95,7 @@ function MapView({ lat, lng, spaces }: MapViewProps) {
         <Popup>Your pinned current location</Popup>
       </CircleMarker>
 
-      {spaces.map((space) => (
-        <Marker
-          key={space._id}
-          position={[space.location.coordinates[1], space.location.coordinates[0]]}
-          icon={getMarkerIcon(space)}
-        >
-          <Popup>
-            <SpacePopup space={space} userLat={lat} userLng={lng} />
-          </Popup>
-        </Marker>
-      ))}
+      <ClusteredMarkers spaces={spaces} />
     </MapContainer>
   );
 }

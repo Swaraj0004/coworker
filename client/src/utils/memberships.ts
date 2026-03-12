@@ -37,6 +37,10 @@ export function formatMembershipPlan(plan: MembershipPlan): string {
 }
 
 export function getUserMemberships(): UserMembership[] {
+  if (getCurrentAuthScope() === "anonymous") {
+    return [];
+  }
+
   const raw = localStorage.getItem(getMembershipsKey());
   return raw ? (JSON.parse(raw) as UserMembership[]) : [];
 }
@@ -62,6 +66,10 @@ function getPlanPrice(space: Space, plan: MembershipPlan): number {
 }
 
 export function addUserMembership(space: Space, plan: UserMembership["plan"]): UserMembership[] {
+  if (getCurrentAuthScope() === "anonymous") {
+    throw new Error("Please login first to add this place.");
+  }
+
   const memberships = getUserMemberships();
 
   if (memberships.some((item) => item.spaceId === space._id)) {

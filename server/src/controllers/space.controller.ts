@@ -245,21 +245,73 @@ export const getNearbySpaces = async (req: AuthenticatedRequest, res: Response) 
     const lat = Number(req.query.lat);
     const lng = Number(req.query.lng);
     const radiusKm = Number(req.query.radiusKm ?? 0);
+    const priceMin =
+      req.query.priceMin !== undefined ? Number(req.query.priceMin) : undefined;
+    const priceMax =
+      req.query.priceMax !== undefined ? Number(req.query.priceMax) : undefined;
+    const minRating =
+      req.query.minRating !== undefined ? Number(req.query.minRating) : undefined;
+    const minAvailableSeats =
+      req.query.minAvailableSeats !== undefined ? Number(req.query.minAvailableSeats) : undefined;
+    const page = Math.max(1, Number(req.query.page ?? 1));
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit ?? 50)));
+    const swLat = req.query.swLat !== undefined ? Number(req.query.swLat) : undefined;
+    const swLng = req.query.swLng !== undefined ? Number(req.query.swLng) : undefined;
+    const neLat = req.query.neLat !== undefined ? Number(req.query.neLat) : undefined;
+    const neLng = req.query.neLng !== undefined ? Number(req.query.neLng) : undefined;
 
     if (Number.isNaN(lat) || Number.isNaN(lng)) {
       return res.status(400).json({ message: "lat and lng are required numbers" });
     }
 
-    if (radiusKm <= 0) {
-      const allSpaces = await Space.find(verifiedVisibilityFilter).sort({ createdAt: -1 });
-      return res.json(allSpaces);
+    const hasBounds =
+      swLat !== undefined &&
+      swLng !== undefined &&
+      neLat !== undefined &&
+      neLng !== undefined &&
+      !Number.isNaN(swLat) &&
+      !Number.isNaN(swLng) &&
+      !Number.isNaN(neLat) &&
+      !Number.isNaN(neLng);
+
+    const match: Record<string, unknown> = {
+      ...verifiedVisibilityFilter
+    };
+
+    if (priceMin !== undefined && !Number.isNaN(priceMin)) {
+      match.pricePerMonth = {
+        ...(typeof match.pricePerMonth === "object" ? (match.pricePerMonth as object) : {}),
+        $gte: priceMin
+      };
     }
 
-    const maxDistance = radiusKm * 1000;
+    if (priceMax !== undefined && !Number.isNaN(priceMax)) {
+      match.pricePerMonth = {
+        ...(typeof match.pricePerMonth === "object" ? (match.pricePerMonth as object) : {}),
+        $lte: priceMax
+      };
+    }
 
-    const spaces = await Space.find({
-      ...verifiedVisibilityFilter,
-      location: {
+    if (minRating !== undefined && !Number.isNaN(minRating)) {
+      match.rating = { $gte: minRating };
+    }
+
+    if (minAvailableSeats !== undefined && !Number.isNaN(minAvailableSeats)) {
+      match.availableSeats = { $gte: minAvailableSeats };
+    }
+
+    if (hasBounds) {
+      match.location = {
+        $geoWithin: {
+          $box: [
+            [swLng as number, swLat as number],
+            [neLng as number, neLat as number]
+          ]
+        }
+      };
+    } else if (radiusKm > 0) {
+      const maxDistance = radiusKm * 1000;
+      match.location = {
         $near: {
           $geometry: {
             type: "Point",
@@ -267,10 +319,23 @@ export const getNearbySpaces = async (req: AuthenticatedRequest, res: Response) 
           },
           $maxDistance: maxDistance
         }
-      }
-    }).sort({ createdAt: -1 });
+      };
+    }
 
-    return res.json(spaces);
+    const total = await Space.countDocuments(match);
+    const spaces = await Space.find(match)
+      .sort(hasBounds ? { createdAt: -1 } : radiusKm > 0 ? { createdAt: -1 } : { createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    return res.json({
+      items: spaces,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: page * limit < total
+    });
   } catch {
     return res.status(500).json({ message: "Server error" });
   }

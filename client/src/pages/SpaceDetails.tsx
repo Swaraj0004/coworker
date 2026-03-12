@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ReviewForm from "../components/ReviewForm";
 import ReviewList from "../components/ReviewList";
-import { createReview, createSpaceLead, fetchReviews, fetchSpaceById } from "../services/api";
+import { createBooking, createReview, createSpaceLead, fetchReviews, fetchSpaceById } from "../services/api";
 import { isAuthenticated } from "../utils/auth";
 import { getFavorites, toggleFavorite } from "../utils/favorites";
 import { addUserMembership, formatMembershipPlan, type MembershipPlan } from "../utils/memberships";
@@ -18,6 +18,11 @@ function SpaceDetails() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>(getFavorites().map((item) => item._id));
   const [message, setMessage] = useState("");
   const [leadLoading, setLeadLoading] = useState<"quote" | "tour" | null>(null);
+  const [bookingDate, setBookingDate] = useState("");
+  const [bookingSeats, setBookingSeats] = useState(1);
+  const [bookingStep, setBookingStep] = useState<1 | 2 | 3>(1);
+  const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking">("upi");
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -64,13 +69,17 @@ function SpaceDetails() {
       return;
     }
 
-    const updated = toggleFavorite(space);
-    setFavoriteIds(updated.map((item) => item._id));
-    setMessage(
-      updated.some((item) => item._id === space._id)
-        ? `${space.name} added to favorites.`
-        : `${space.name} removed from favorites.`
-    );
+    try {
+      const updated = toggleFavorite(space);
+      setFavoriteIds(updated.map((item) => item._id));
+      setMessage(
+        updated.some((item) => item._id === space._id)
+          ? `${space.name} added to favorites.`
+          : `${space.name} removed from favorites.`
+      );
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Please login first to add favorites.");
+    }
   };
 
   const handleAddMembership = () => {
@@ -78,8 +87,12 @@ function SpaceDetails() {
       return;
     }
 
-    addUserMembership(space, selectedPlan);
-    setMessage(`${space.name} added to Your Spaces with ${formatMembershipPlan(selectedPlan)} plan.`);
+    try {
+      addUserMembership(space, selectedPlan);
+      setMessage(`${space.name} added to Your Spaces with ${formatMembershipPlan(selectedPlan)} plan.`);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Please login first to add this place.");
+    }
   };
 
   const handleLeadAction = async (action: "quote" | "tour") => {
@@ -103,6 +116,44 @@ function SpaceDetails() {
       setMessage(err instanceof Error ? err.message : "Action failed");
     } finally {
       setLeadLoading(null);
+    }
+  };
+
+  const handleBookSeats = async () => {
+    if (!space) {
+      return;
+    }
+
+    if (!isAuthenticated()) {
+      setMessage("Please login first to book seats.");
+      return;
+    }
+
+    if (!bookingDate) {
+      setMessage("Please select booking date.");
+      return;
+    }
+
+    if (!Number.isInteger(bookingSeats) || bookingSeats <= 0) {
+      setMessage("Please enter valid seat count.");
+      return;
+    }
+
+    try {
+      setBookingLoading(true);
+      await createBooking({
+        spaceId: space._id,
+        date: bookingDate,
+        seatsBooked: bookingSeats
+      });
+      addUserMembership(space, selectedPlan);
+      setMessage(`Booking confirmed for ${bookingSeats} seat(s) on ${new Date(bookingDate).toLocaleDateString()}.`);
+      setSpace({ ...space, availableSeats: Math.max(0, space.availableSeats - bookingSeats) });
+      setBookingStep(1);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Booking failed");
+    } finally {
+      setBookingLoading(false);
     }
   };
 
@@ -145,6 +196,16 @@ function SpaceDetails() {
 
   const rating = space.rating || 4.6;
   const isFavoriteSpace = favoriteIds.includes(space._id);
+  const planUnitPrice =
+    selectedPlan === "private-office"
+      ? pricing.privateOffice ?? space.pricePerMonth
+      : selectedPlan === "virtual-office"
+        ? pricing.virtualOffice ?? space.pricePerMonth
+        : selectedPlan === "serviced-office"
+          ? pricing.servicedOffice ?? space.pricePerMonth
+          : pricing.coworkingSpace ?? space.pricePerMonth;
+  const totalBookingAmount =
+    planUnitPrice * bookingSeats;
 
   return (
     <section className="space-details-shell">
@@ -230,24 +291,130 @@ function SpaceDetails() {
             {leadLoading === "tour" ? "BOOKING..." : "BOOK A TOUR"}
           </button>
 
+          <div className="surface-card" style={{ marginTop: "1rem", padding: "0.8rem" }}>
+            <h4 style={{ marginTop: 0 }}>Book Seats</h4>
+            <p style={{ marginTop: 0, color: "#475467" }}>
+              Step {bookingStep}/3: Select plan → seats/date → finalize payment
+            </p>
+
+            {bookingStep === 1 && (
+              <>
+                <label className="field">
+                  Plan
+                  <select
+                    className="control-input"
+                    value={selectedPlan}
+                    onChange={(e) => setSelectedPlan(e.target.value as MembershipPlan)}
+                  >
+                    <option value="coworking-space">Coworking Space</option>
+                    <option value="private-office">Private Office</option>
+                    <option value="virtual-office">Virtual Office</option>
+                    <option value="serviced-office">Serviced Office</option>
+                  </select>
+                </label>
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={() => {
+                    if (!isAuthenticated()) {
+                      setMessage("Please login first to book seats.");
+                      return;
+                    }
+                    setBookingStep(2);
+                  }}
+                >
+                  Continue To Seats
+                </button>
+              </>
+            )}
+
+            {bookingStep === 2 && (
+              <>
+                <label className="field">
+                  Date
+                  <input
+                    type="date"
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                  />
+                </label>
+                <label className="field">
+                  Seats
+                  <input
+                    type="number"
+                    min={1}
+                    max={space.availableSeats || 1}
+                    value={bookingSeats}
+                    onChange={(e) => setBookingSeats(Number(e.target.value))}
+                  />
+                </label>
+                <div className="row" style={{ gap: "0.6rem" }}>
+                  <button className="btn btn-outline" type="button" onClick={() => setBookingStep(1)}>
+                    Back
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => {
+                      if (!bookingDate) {
+                        setMessage("Please select booking date.");
+                        return;
+                      }
+                      if (!Number.isInteger(bookingSeats) || bookingSeats <= 0) {
+                        setMessage("Please enter valid seat count.");
+                        return;
+                      }
+                      setBookingStep(3);
+                    }}
+                  >
+                    Continue To Payment
+                  </button>
+                </div>
+              </>
+            )}
+
+            {bookingStep === 3 && (
+              <>
+                <label className="field">
+                  Payment Method
+                  <select
+                    className="control-input"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as "upi" | "card" | "netbanking")}
+                  >
+                    <option value="upi">UPI</option>
+                    <option value="card">Card</option>
+                    <option value="netbanking">Net Banking</option>
+                  </select>
+                </label>
+                <p style={{ margin: "0.2rem 0" }}>
+                  Plan: <strong>{formatMembershipPlan(selectedPlan)}</strong>
+                </p>
+                <p style={{ margin: "0.2rem 0" }}>
+                  Seats: <strong>{bookingSeats}</strong>
+                </p>
+                <p style={{ margin: "0.2rem 0" }}>
+                  Amount: <strong>Rs {totalBookingAmount}</strong>
+                </p>
+                <div className="row" style={{ gap: "0.6rem" }}>
+                  <button className="btn btn-outline" type="button" onClick={() => setBookingStep(2)}>
+                    Back
+                  </button>
+                  <button className="btn btn-primary" type="button" disabled={bookingLoading} onClick={() => void handleBookSeats()}>
+                    {bookingLoading ? "PROCESSING PAYMENT..." : `Finalize Payment (${paymentMethod.toUpperCase()})`}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           <div className="row" style={{ marginTop: "1rem", flexWrap: "wrap" }}>
-            <button className="btn btn-outline" type="button" onClick={handleFavorite}>
-              {isFavoriteSpace ? "Remove Favorite" : "Add Favorite"}
+            <button className="btn btn-outline" type="button" onClick={handleFavorite} disabled={!isAuthenticated()}>
+              {isAuthenticated() ? (isFavoriteSpace ? "Remove Favorite" : "Add Favorite") : "Login To Favorite"}
             </button>
 
-            <select
-              className="control-input"
-              style={{ minWidth: "220px" }}
-              value={selectedPlan}
-              onChange={(e) => setSelectedPlan(e.target.value as MembershipPlan)}
-            >
-              <option value="coworking-space">Coworking Space</option>
-              <option value="private-office">Private Office</option>
-              <option value="virtual-office">Virtual Office</option>
-              <option value="serviced-office">Serviced Office</option>
-            </select>
-
-            <button className="btn btn-primary" type="button" onClick={handleAddMembership}>
+            <button className="btn btn-primary" type="button" onClick={handleAddMembership} disabled={!isAuthenticated()}>
               Add To Your Spaces
             </button>
           </div>
