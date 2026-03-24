@@ -3,8 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "next dev",
-    "dev:full": "concurrently -k -n NEXT,API -c cyan,green \"next dev\" \"npm --prefix server run dev\"",
+    "dev": "concurrently -k -n NEXT,API -c cyan,green \"next dev\" \"npm --prefix server run dev\"",
+    "dev:next": "next dev",
+    "dev:api": "npm --prefix server run dev",
+    "dev:full": "npm run dev",
     "build": "next build",
     "build:all": "next build && npm --prefix server run build",
     "start": "next start"
