@@ -1,4 +1,9 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const isLocalBrowser =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || (isLocalBrowser ? "http://localhost:5000/api" : "/api");
 
 export interface AdminStats {
   totalUsers: number;

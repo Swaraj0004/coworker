@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import MapView from "../../components/MapView";
 import { fetchNearbySpaces } from "../../services/api";
 import type { Space } from "../../types/space";
 import { getFavorites, toggleFavorite } from "../../utils/favorites";
@@ -12,6 +11,7 @@ interface Coordinates {
 }
 
 const DEFAULT_LOCATION: Coordinates = { lat: 21.1458, lng: 79.0882 };
+const MapView = lazy(() => import("../../components/MapView"));
 
 const toRad = (value: number) => (value * Math.PI) / 180;
 const distanceInKm = (aLat: number, aLng: number, bLat: number, bLng: number) => {
@@ -254,7 +254,9 @@ function UserSearchSpace() {
         {message && <p style={{ color: "#15803d", marginTop: 0 }}>{message}</p>}
 
         <div className="map-wrap" style={{ marginBottom: "1rem" }}>
-          <MapView lat={coords.lat} lng={coords.lng} spaces={filteredSpaces} />
+          <Suspense fallback={<p className="page-subtitle">Loading map...</p>}>
+            <MapView lat={coords.lat} lng={coords.lng} spaces={filteredSpaces} />
+          </Suspense>
         </div>
 
         <div className="space-grid">

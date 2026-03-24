@@ -1,11 +1,9 @@
-import "dotenv/config";
-import type { Request, Response } from "express";
 import app from "../server/src/app";
 import connectDB from "../server/src/config/db";
 
 let isReady = false;
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: any, res: any) {
   if (!isReady) {
     await connectDB();
     isReady = true;

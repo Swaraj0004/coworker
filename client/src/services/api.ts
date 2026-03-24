@@ -6,9 +6,12 @@ import type {
 } from "../types/space";
 import type { Booking, OwnerAnalytics, PaymentOrderResponse } from "../types/booking";
 
+const isLocalBrowser =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? "http://localhost:5000/api" : "/api");
+  process.env.NEXT_PUBLIC_API_BASE_URL || (isLocalBrowser ? "http://localhost:5000/api" : "/api");
 
 export interface IndiaCityStat {
   city: string;

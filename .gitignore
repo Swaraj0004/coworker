@@ -1,77 +1,69 @@
-# ==============================
-# Node Modules
-# ==============================
+# Node modules
 node_modules/
+client/node_modules/
+server/node_modules/
 
-# ==============================
-# Build Outputs
-# ==============================
+# Build outputs
 dist/
 build/
 out/
+client/dist/
+server/dist/
+next/
+.next/
 
-# ==============================
-# Environment Variables
-# ==============================
+# Caches
+.cache/
+.vite/
+.turbo/
+
+# Vercel
+.vercel/
+
+# Environment files
 .env
 .env.*
+client/.env
+client/.env.*
+server/.env
+server/.env.*
 !.env.example
+!client/.env.example
+!server/.env.example
 
-# ==============================
 # Logs
-# ==============================
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# ==============================
 # TypeScript
-# ==============================
 *.tsbuildinfo
 
-# ==============================
 # Coverage
-# ==============================
 coverage/
 
-# ==============================
-# Vite / React Cache
-# ==============================
-.vite/
-.cache/
+# Temp files
+tmp/
+temp/
+*.tmp
 
-# ==============================
-# OS Files
-# ==============================
-.DS_Store
-Thumbs.db
-
-# ==============================
-# IDE / Editor
-# ==============================
+# IDE/editor
 .vscode/
 .idea/
 
-# ==============================
-# Temporary Files
-# ==============================
-tmp/
-temp/
+# OS files
+.DS_Store
+Thumbs.db
 
-# ==============================
-# Python (for ML fake review module if added later)
-# ==============================
+# Python (optional ML scripts)
 __pycache__/
 *.pyc
 
-# ==============================
-# Uploads / Storage
-# ==============================
+# Upload/storage
 uploads/
 
-# ==============================
-# MongoDB Local Files
-# ==============================
+# Local DB artifacts
 *.mongodb
