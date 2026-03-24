@@ -3,6 +3,7 @@ import cloudinary, { isCloudinaryConfigured } from "../config/cloudinary";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import Space from "../models/Space";
 import User from "../models/User";
+import { loadIndiaRegionsFromCsv } from "../services/indiaGeo.service";
 
 const normalizeStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) {
@@ -383,6 +384,16 @@ export const getIndiaCityStats = async (_req: AuthenticatedRequest, res: Respons
     return res.json(stats);
   } catch {
     return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getIndiaRegionsGeo = async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const regions = loadIndiaRegionsFromCsv();
+    return res.json(regions);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to load India regions";
+    return res.status(500).json({ message });
   }
 };
 

@@ -6,6 +6,7 @@ import {
   deleteOwnerSpace,
   geocodeSpaceAddress,
   getIndiaCityStats,
+  getIndiaRegionsGeo,
   getNearbySpaces,
   getOwnerEnquiryNotifications,
   getOwnerSpaces,
@@ -18,6 +19,7 @@ const router = Router();
 
 router.get("/nearby", getNearbySpaces);
 router.get("/cities/india", getIndiaCityStats);
+router.get("/geo/india", getIndiaRegionsGeo);
 router.get("/owner", verifyToken, verifyOwner, getOwnerSpaces);
 router.get("/owner/me", verifyToken, verifyOwner, getOwnerSpaces);
 router.get("/owner/enquiries", verifyToken, verifyOwner, getOwnerEnquiryNotifications);

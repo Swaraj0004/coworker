@@ -6,7 +6,9 @@ import type {
 } from "../types/space";
 import type { Booking, OwnerAnalytics, PaymentOrderResponse } from "../types/booking";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "http://localhost:5000/api" : "/api");
 
 export interface IndiaCityStat {
   city: string;
@@ -15,6 +17,18 @@ export interface IndiaCityStat {
   spaces: number;
   lat: number;
   lng: number;
+}
+
+export interface IndiaCityGeo {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface IndiaRegionGeo {
+  name: string;
+  kind: "state" | "union_territory";
+  cities: IndiaCityGeo[];
 }
 
 export interface NearbySpacesResponse {
@@ -121,6 +135,10 @@ export async function fetchNearbySpaces(
 
 export async function fetchIndiaCityStats(): Promise<IndiaCityStat[]> {
   return apiRequest<IndiaCityStat[]>("/spaces/cities/india");
+}
+
+export async function fetchIndiaRegionsGeo(): Promise<IndiaRegionGeo[]> {
+  return apiRequest<IndiaRegionGeo[]>("/spaces/geo/india");
 }
 
 export async function fetchSpaceById(id: string): Promise<Space> {

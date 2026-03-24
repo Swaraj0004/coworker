@@ -1,8 +1,8 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { INDIA_STATE_AND_UT_OPTIONS, getCitiesForRegion } from "../../data/indiaLocations";
 import {
   deleteOwnerSpace,
+  fetchIndiaRegionsGeo,
   fetchOwnerSpaces,
   updateOwnerSpace,
   uploadSpacePhotos
@@ -56,15 +56,22 @@ function MySpaces() {
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [editingFiles, setEditingFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [regionData, setRegionData] = useState<Array<{ name: string; cities: Array<{ name: string }> }>>([]);
 
   const totalSeats = useMemo(
     () => spaces.reduce((sum, space) => sum + space.availableSeats, 0),
     [spaces]
   );
 
+  const stateOptions = useMemo(() => regionData.map((region) => region.name), [regionData]);
+
   const editCityOptions = useMemo(() => {
-    return editForm ? getCitiesForRegion(editForm.state) : [];
-  }, [editForm]);
+    if (!editForm) {
+      return [];
+    }
+    const matched = regionData.find((region) => region.name === editForm.state);
+    return matched?.cities || [];
+  }, [editForm, regionData]);
 
   const loadSpaces = async () => {
     try {
@@ -81,6 +88,19 @@ function MySpaces() {
 
   useEffect(() => {
     void loadSpaces();
+  }, []);
+
+  useEffect(() => {
+    fetchIndiaRegionsGeo()
+      .then((regions) =>
+        setRegionData(
+          regions.map((region) => ({
+            name: region.name,
+            cities: region.cities.map((city) => ({ name: city.name }))
+          }))
+        )
+      )
+      .catch(() => setRegionData([]));
   }, []);
 
   const startEdit = (space: Space) => {
@@ -242,7 +262,7 @@ function MySpaces() {
                           onChange={(e) => handleEditStateChange(e.target.value)}
                         >
                           <option value="">Select state or union territory</option>
-                          {INDIA_STATE_AND_UT_OPTIONS.map((state) => (
+                          {stateOptions.map((state) => (
                             <option key={state} value={state}>
                               {state}
                             </option>
@@ -455,4 +475,5 @@ function MySpaces() {
 }
 
 export default MySpaces;
+
 

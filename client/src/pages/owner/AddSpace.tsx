@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+Ôªøimport { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { INDIA_STATE_AND_UT_OPTIONS, getCitiesForRegion } from "../../data/indiaLocations";
-import { createSpace, uploadSpacePhotos } from "../../services/api";
+import { createSpace, fetchIndiaRegionsGeo, uploadSpacePhotos } from "../../services/api";
+
 
 const AMENITY_SECTIONS: Array<{ title: string; items: string[] }> = [
   {
@@ -31,9 +31,9 @@ const parseCoordinateInput = (value: string, isLatitude: boolean) => {
   const normalized = value
     .trim()
     .toUpperCase()
-    .replace(/[∫∞]/g, "∞")
-    .replace(/['í`]/g, "'")
-    .replace(/[?ìî]/g, '"')
+    .replace(/[¬∫¬∞]/g, "¬∞")
+    .replace(/['‚Äô`]/g, "'")
+    .replace(/[?‚Äú‚Äù]/g, '"')
     .replace(/\s+/g, " ");
 
   if (!normalized) {
@@ -110,9 +110,28 @@ function AddSpace() {
     "Parking"
   ]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [regionData, setRegionData] = useState<Array<{ name: string; cities: Array<{ name: string }> }>>([]);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
-  const cityOptions = useMemo(() => getCitiesForRegion(form.state), [form.state]);
+  useEffect(() => {
+    fetchIndiaRegionsGeo()
+      .then((regions) => {
+        setRegionData(
+          regions.map((region) => ({
+            name: region.name,
+            cities: region.cities.map((city) => ({ name: city.name }))
+          }))
+        );
+      })
+      .catch(() => setRegionData([]));
+  }, []);
+
+  const stateOptions = useMemo(() => regionData.map((region) => region.name), [regionData]);
+
+  const cityOptions = useMemo(() => {
+    const matched = regionData.find((region) => region.name === form.state);
+    return matched?.cities || [];
+  }, [form.state, regionData]);
 
   const amenitiesPayload = useMemo(
     () => ({
@@ -236,7 +255,7 @@ function AddSpace() {
             State / Union Territory
             <select value={form.state} onChange={(e) => handleStateChange(e.target.value)} required>
               <option value="">Select state or union territory</option>
-              {INDIA_STATE_AND_UT_OPTIONS.map((state) => (
+              {stateOptions.map((state) => (
                 <option key={state} value={state}>
                   {state}
                 </option>
@@ -435,3 +454,4 @@ function AddSpace() {
 }
 
 export default AddSpace;
+

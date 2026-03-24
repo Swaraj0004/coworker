@@ -9,7 +9,12 @@ import bookingRoutes from "./routes/booking.routes";
 
 const app: Application = express();
 
-app.use(cors());
+const corsOrigin = process.env.CORS_ORIGIN?.trim();
+app.use(
+  cors({
+    origin: corsOrigin ? corsOrigin.split(",").map((origin) => origin.trim()) : true
+  })
+);
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
