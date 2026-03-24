@@ -1,5 +1,5 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/auth.middleware";
 import Review from "../models/Review";
 import Space from "../models/Space";
 import { detectFakeReview } from "../services/fakeReview.service";

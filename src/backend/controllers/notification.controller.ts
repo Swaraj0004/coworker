@@ -1,5 +1,5 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/auth.middleware";
 import Notification from "../models/Notification";
 import Space from "../models/Space";
 import User from "../models/User";

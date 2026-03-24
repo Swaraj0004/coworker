@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import Razorpay from "razorpay";
-import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/auth.middleware";
 import Booking from "../models/Booking";
 import Notification from "../models/Notification";
 import Space from "../models/Space";

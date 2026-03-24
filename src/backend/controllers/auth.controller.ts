@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/jwt";
-import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import type { AuthenticatedRequest } from "../middleware/auth.middleware";
 import OtpCode from "../models/OtpCode";
 import User from "../models/User";
 import { sendOtpEmail, sendPasswordChangedEmail } from "../services/email.service";

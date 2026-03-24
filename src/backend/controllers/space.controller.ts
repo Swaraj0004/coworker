@@ -1,6 +1,6 @@
-import { Response } from "express";
+import type { Response } from "express";
 import cloudinary, { isCloudinaryConfigured } from "../config/cloudinary";
-import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import type { AuthenticatedRequest } from "../middleware/auth.middleware";
 import Space from "../models/Space";
 import User from "../models/User";
 import { loadIndiaRegionsFromCsv } from "../services/indiaGeo.service";

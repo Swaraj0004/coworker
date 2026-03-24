@@ -173,7 +173,7 @@ const uploadSeedPhotosToCloudinary = async () => {
 async function seedDemoData() {
   try {
     if (!process.env.MONGO_URI) {
-      throw new Error("MONGO_URI missing in server/.env");
+      throw new Error("MONGO_URI missing in root .env");
     }
 
     await mongoose.connect(process.env.MONGO_URI);

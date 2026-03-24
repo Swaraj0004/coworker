@@ -67,9 +67,8 @@ export const loadIndiaRegionsFromCsv = (): IndiaRegionGeo[] => {
     return cachedRegions;
   }
 
-  const pathCandidates = [
+const pathCandidates = [
     path.resolve(process.cwd(), INDIA_CSV_RELATIVE_PATH),
-    path.resolve(process.cwd(), "server", INDIA_CSV_RELATIVE_PATH),
     path.resolve(__dirname, "..", "..", INDIA_CSV_RELATIVE_PATH),
     path.resolve(__dirname, "..", "..", "..", INDIA_CSV_RELATIVE_PATH)
   ];

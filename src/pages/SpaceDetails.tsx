@@ -262,7 +262,7 @@ function SpaceDetails() {
       const raw = err instanceof Error ? err.message : "Booking failed";
       if (raw.toLowerCase().includes("authentication failed")) {
         setMessage(
-          "Razorpay authentication failed. Regenerate test key/secret pair in Razorpay, update server .env, and restart backend."
+          "Razorpay authentication failed. Regenerate test key/secret pair in Razorpay, update root .env, and restart Next.js."
         );
       } else {
         setMessage(raw);

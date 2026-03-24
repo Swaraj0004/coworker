@@ -1,45 +1,31 @@
-# Space Now (Next.js Monorepo-Style, Single Deploy)
+# Space Now (Pure Next.js)
 
-This project is now organized for a **single Vercel deployment**:
+This project now runs as a **single pure Next.js app**:
 
-- `app/` -> Next.js App Router shell
-- `pages/api/[...path].ts` -> serverless API bridge
-- `src/` -> frontend React UI code (moved from old Vite `client/src`)
-- `server/src/` -> Express routes/controllers/services reused by API bridge
-- `server/data/Indian Cities Geo Data.csv` -> city geo dataset used by backend services
+- `app/` -> Next App Router pages + API routes
+- `app/api/[...path]/route.ts` -> backend API router
+- `src/` -> frontend UI + backend modules (`src/backend/*`)
+- `data/Indian Cities Geo Data.csv` -> India geo dataset
 
-## Key Changes
+No separate Express server process is required.
 
-- Removed old Vite runtime structure from deployment flow.
-- Moved frontend source to root `src/` for Next-first structure.
-- Kept backend inside repo and exposed it through `/api/*` (no separate frontend/backend deployment required).
-- Added robust API bootstrap handling so failures return JSON messages instead of HTML error pages.
-
-## Local Development
-
-### Recommended (single process, same as production behavior)
+## Local Run
 
 ```bash
 npm install
-npm install --prefix server
 npm run dev
 ```
 
-This runs only Next.js. API calls go through `pages/api/[...path].ts`.
+Open [http://localhost:3000](http://localhost:3000)
 
-### Optional legacy two-process mode
+## Environment (root `.env`)
 
-```bash
-npm run dev:full
-```
+Create `.env` in project root using `.env.example`.
 
-## Required Environment Variables (Vercel + local)
-
-Set these in Vercel Project Settings -> Environment Variables:
+Required for full features:
 
 - `MONGO_URI`
 - `JWT_SECRET`
-- `CORS_ORIGIN` (comma-separated if multiple)
 - `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_USER`
@@ -50,30 +36,16 @@ Set these in Vercel Project Settings -> Environment Variables:
 - `CLOUDINARY_API_SECRET`
 - `RAZORPAY_KEY_ID`
 - `RAZORPAY_KEY_SECRET`
-- `NEXT_PUBLIC_RAZORPAY_KEY_ID`
-- `NEXT_PUBLIC_API_BASE_URL` (optional; default is `/api`)
+- `PAYMENT_MODE` (`mock` or `razorpay`)
+- `NEXT_PUBLIC_API_BASE_URL` (optional, defaults to `/api`)
+- `NEXT_PUBLIC_RAZORPAY_KEY_ID` (optional for client checkout, fallback uses `RAZORPAY_KEY_ID`)
 
-For local single-process mode, `server/.env` is automatically loaded by the API bridge.
+## Deploy (Vercel)
 
-## Deployment (Vercel)
+Use one Vercel project (Next.js preset).
 
-This repo is configured to deploy as one project. `vercel.json` includes server files for API functions.
+1. Import repo
+2. Add the same env vars in Vercel Project Settings
+3. Deploy
 
-If you previously set custom Build/Output settings in Vercel UI:
-
-- Framework Preset: `Next.js`
-- Build Command: default
-- Output Directory: **empty/default** (do not set `dist`)
-
-## Troubleshooting
-
-### `Unexpected token '<' ... is not valid JSON`
-Usually means API endpoint returned an HTML error page. Check:
-
-1. Vercel env vars (especially `MONGO_URI`)
-2. Function logs for `/api/*`
-3. That deployment uses latest commit with `pages/api/[...path].ts`
-
-### `Request failed` on India Cities
-Most often backend bootstrap/DB connection failed. Confirm `MONGO_URI` and function logs.
-
+No separate frontend/backend deployment is needed.
