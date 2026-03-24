@@ -15,6 +15,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": [
+      "node"
+    ],
     "jsx": "preserve",
     "incremental": true,
     "plugins": [

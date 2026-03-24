@@ -1,13 +1,20 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import App from "../src/App";
 import { ThemeProvider } from "../src/context/ThemeContext";
 
-const App = dynamic(() => import("../src/App"), {
-  ssr: false
-});
-
 export default function ClientApp() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <ThemeProvider>
       <App />
