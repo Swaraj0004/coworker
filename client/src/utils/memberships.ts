@@ -49,6 +49,21 @@ function saveUserMemberships(data: UserMembership[]) {
   localStorage.setItem(getMembershipsKey(), JSON.stringify(data));
 }
 
+function addOneCalendarMonth(baseIso: string): string {
+  const baseDate = new Date(baseIso);
+  const safeBase = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate;
+
+  const dayOfMonth = safeBase.getDate();
+  const next = new Date(safeBase);
+  next.setDate(1);
+  next.setMonth(next.getMonth() + 1);
+
+  const daysInNextMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  next.setDate(Math.min(dayOfMonth, daysInNextMonth));
+
+  return next.toISOString();
+}
+
 function getPlanPrice(space: Space, plan: MembershipPlan): number {
   const pricing = space.pricing || {};
 
@@ -77,7 +92,7 @@ export function addUserMembership(space: Space, plan: UserMembership["plan"]): U
   }
 
   const monthlyPrice = Math.round(getPlanPrice(space, plan));
-  const nextBillingDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const nextBillingDate = addOneCalendarMonth(new Date().toISOString());
 
   const updated = [
     ...memberships,
@@ -107,12 +122,26 @@ export function updateMembershipStatus(
   return updated;
 }
 
-export function payMembership(spaceId: string): UserMembership[] {
-  const nextBillingDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+export function payMembership(spaceId: string, paidReferenceDate?: string): UserMembership[] {
+  const updated = getUserMemberships().map((item) => {
+    if (item.spaceId !== spaceId) {
+      return item;
+    }
 
-  const updated = getUserMemberships().map((item) =>
-    item.spaceId === spaceId ? { ...item, nextBillingDate } : item
-  );
+    const currentDue = new Date(item.nextBillingDate).getTime();
+    const paidTime = paidReferenceDate ? new Date(paidReferenceDate).getTime() : Number.NaN;
+    const baseTime = Math.max(
+      Number.isFinite(currentDue) ? currentDue : Date.now(),
+      Number.isFinite(paidTime) ? paidTime : Date.now()
+    );
+    const nextBillingDate = addOneCalendarMonth(new Date(baseTime).toISOString());
+
+    return {
+      ...item,
+      status: "active" as const,
+      nextBillingDate
+    };
+  });
 
   saveUserMemberships(updated);
   return updated;

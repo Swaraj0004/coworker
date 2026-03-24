@@ -4,7 +4,7 @@ import type {
   Space,
   UpdateSpacePayload
 } from "../types/space";
-import type { Booking, OwnerAnalytics } from "../types/booking";
+import type { Booking, OwnerAnalytics, PaymentOrderResponse } from "../types/booking";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
@@ -177,15 +177,33 @@ export async function createBooking(payload: {
   spaceId: string;
   date: string;
   seatsBooked: number;
-}): Promise<Booking> {
-  return apiRequest<Booking>(
+  plan: "coworking-space" | "private-office" | "virtual-office" | "serviced-office";
+}): Promise<PaymentOrderResponse> {
+  return apiRequest<PaymentOrderResponse>(
     `/bookings/spaces/${payload.spaceId}`,
     {
       method: "POST",
       body: JSON.stringify({
         date: payload.date,
-        seatsBooked: payload.seatsBooked
+        seatsBooked: payload.seatsBooked,
+        plan: payload.plan
       })
+    },
+    true
+  );
+}
+
+export async function verifyBookingPayment(payload: {
+  bookingId: string;
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
+}): Promise<{ message: string; booking: Booking }> {
+  return apiRequest<{ message: string; booking: Booking }>(
+    "/bookings/verify-payment",
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
     },
     true
   );

@@ -18,11 +18,29 @@ export interface Booking {
   _id: string;
   userId: string | BookingUserRef;
   spaceId: string | BookingSpaceRef;
+  plan?: "coworking-space" | "private-office" | "virtual-office" | "serviced-office";
   date: string;
   seatsBooked: number;
-  status: "confirmed" | "cancelled";
+  unitPrice?: number;
+  totalAmount?: number;
+  status: "pending" | "confirmed" | "cancelled" | "payment_failed";
+  paymentOrderId?: string;
+  paymentId?: string;
+  paymentStatus?: "created" | "paid" | "failed";
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface PaymentOrderResponse {
+  booking: Booking;
+  payment: {
+    gateway: "razorpay" | "mock";
+    keyId: string;
+    orderId: string;
+    amount: number;
+    currency: string;
+    bookingId: string;
+  };
 }
 
 export interface OwnerAnalytics {

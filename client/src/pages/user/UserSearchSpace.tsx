@@ -11,6 +11,8 @@ interface Coordinates {
   lng: number;
 }
 
+const DEFAULT_LOCATION: Coordinates = { lat: 21.1458, lng: 79.0882 };
+
 const toRad = (value: number) => (value * Math.PI) / 180;
 const distanceInKm = (aLat: number, aLng: number, bLat: number, bLng: number) => {
   const earthRadiusKm = 6371;
@@ -38,8 +40,10 @@ function UserSearchSpace() {
   const [favoriteIds, setFavoriteIds] = useState<string[]>(getFavorites().map((item) => item._id));
   const [selectedPlans, setSelectedPlans] = useState<Record<string, MembershipPlan>>({});
   const [message, setMessage] = useState("");
+  const [locationNotice, setLocationNotice] = useState("");
 
   const loadNearbySpaces = async (location: Coordinates, radius = radiusKm, nextPage = page) => {
+    setCoords(location);
     try {
       setLoading(true);
       const priceRange =
@@ -62,25 +66,33 @@ function UserSearchSpace() {
       setTotal(data.total);
       setTotalPages(data.totalPages);
       setPage(data.page);
-      setCoords(location);
     } catch {
       setSpaces([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   };
 
   const locateUser = (highAccuracy = false) => {
+    if (!navigator.geolocation) {
+      setLocationNotice("Geolocation is not supported. Showing default results near Nagpur.");
+      void loadNearbySpaces(DEFAULT_LOCATION, radiusKm, 1);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        setLocationNotice("");
         await loadNearbySpaces({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude
         });
       },
       () => {
-        alert("Location permission required");
-        setLoading(false);
+        setLocationNotice("Location access denied. Showing default results near Nagpur.");
+        void loadNearbySpaces(DEFAULT_LOCATION, radiusKm, 1);
       },
       {
         enableHighAccuracy: highAccuracy,
@@ -156,6 +168,9 @@ function UserSearchSpace() {
     return (
       <section className="surface-card section" style={{ width: "100%", margin: 0 }}>
         <h2 className="page-title">Location unavailable</h2>
+        <button className="btn btn-primary" onClick={() => locateUser(true)} style={{ marginTop: "0.8rem" }}>
+          Retry Location Access
+        </button>
       </section>
     );
   }
@@ -165,6 +180,7 @@ function UserSearchSpace() {
       <section className="home-shell" style={{ width: "100%", margin: 0 }}>
         <h1 className="page-title">Search Space</h1>
         <p className="page-subtitle">Search by workspace name, filter by pricing, and pin your exact location.</p>
+        {locationNotice && <p className="page-subtitle">{locationNotice}</p>}
 
         <div className="surface-card home-controls">
           <input

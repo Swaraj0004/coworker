@@ -2,7 +2,15 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ReviewForm from "../components/ReviewForm";
 import ReviewList from "../components/ReviewList";
-import { createBooking, createReview, createSpaceLead, fetchReviews, fetchSpaceById } from "../services/api";
+import {
+  cancelBooking,
+  createBooking,
+  createReview,
+  createSpaceLead,
+  fetchReviews,
+  fetchSpaceById,
+  verifyBookingPayment
+} from "../services/api";
 import { isAuthenticated } from "../utils/auth";
 import { getFavorites, toggleFavorite } from "../utils/favorites";
 import { addUserMembership, formatMembershipPlan, type MembershipPlan } from "../utils/memberships";
@@ -23,6 +31,22 @@ function SpaceDetails() {
   const [bookingStep, setBookingStep] = useState<1 | 2 | 3>(1);
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking">("upi");
   const [bookingLoading, setBookingLoading] = useState(false);
+
+  const loadRazorpayScript = () => {
+    return new Promise<boolean>((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   useEffect(() => {
     if (!id) {
@@ -141,17 +165,108 @@ function SpaceDetails() {
 
     try {
       setBookingLoading(true);
-      await createBooking({
+      const orderPayload = await createBooking({
         spaceId: space._id,
         date: bookingDate,
-        seatsBooked: bookingSeats
+        seatsBooked: bookingSeats,
+        plan: selectedPlan
       });
-      addUserMembership(space, selectedPlan);
-      setMessage(`Booking confirmed for ${bookingSeats} seat(s) on ${new Date(bookingDate).toLocaleDateString()}.`);
-      setSpace({ ...space, availableSeats: Math.max(0, space.availableSeats - bookingSeats) });
-      setBookingStep(1);
+
+      const handleBookingSuccess = async (verificationPayload: {
+        razorpay_order_id?: string;
+        razorpay_payment_id?: string;
+        razorpay_signature?: string;
+      }) => {
+        const verification = await verifyBookingPayment({
+          bookingId: orderPayload.payment.bookingId,
+          ...verificationPayload
+        });
+
+        addUserMembership(space, selectedPlan);
+        setMessage(
+          `${verification.message}. Booking confirmed for ${bookingSeats} seat(s) on ${new Date(
+            bookingDate
+          ).toLocaleDateString()}.`
+        );
+        setSpace({
+          ...space,
+          availableSeats: Math.max(0, space.availableSeats - bookingSeats)
+        });
+        setBookingStep(1);
+      };
+
+      if (orderPayload.payment.gateway === "mock") {
+        const proceed = window.confirm(
+          `Demo payment for Rs ${Math.round(orderPayload.payment.amount / 100)}. Click OK to simulate successful payment.`
+        );
+
+        if (!proceed) {
+          setMessage("Mock payment cancelled. Booking is still pending payment.");
+          return;
+        }
+
+        await handleBookingSuccess({
+          razorpay_order_id: orderPayload.payment.orderId,
+          razorpay_payment_id: `mock_payment_${Date.now()}`,
+          razorpay_signature: "mock_signature"
+        });
+        return;
+      }
+
+      const sdkLoaded = await loadRazorpayScript();
+      if (!sdkLoaded || !(window as any).Razorpay) {
+        setMessage("Unable to load payment gateway. Please try again.");
+        return;
+      }
+
+      const options = {
+        key: orderPayload.payment.keyId,
+        amount: orderPayload.payment.amount,
+        currency: orderPayload.payment.currency,
+        name: "Space Now",
+        description: `${formatMembershipPlan(selectedPlan)} booking payment`,
+        order_id: orderPayload.payment.orderId,
+        handler: async (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            await handleBookingSuccess({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+          } catch (err) {
+            setMessage(err instanceof Error ? err.message : "Payment verification failed");
+          }
+        },
+        modal: {
+          ondismiss: async () => {
+            try {
+              await cancelBooking(orderPayload.payment.bookingId);
+              setMessage("Payment cancelled. Pending booking removed.");
+            } catch {
+              setMessage("Payment cancelled. You can remove pending booking from Your Spaces.");
+            }
+          }
+        },
+        theme: {
+          color: "#0b7d77"
+        }
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Booking failed");
+      const raw = err instanceof Error ? err.message : "Booking failed";
+      if (raw.toLowerCase().includes("authentication failed")) {
+        setMessage(
+          "Razorpay authentication failed. Regenerate test key/secret pair in Razorpay, update server .env, and restart backend."
+        );
+      } else {
+        setMessage(raw);
+      }
     } finally {
       setBookingLoading(false);
     }

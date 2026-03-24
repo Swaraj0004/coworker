@@ -134,6 +134,17 @@ const createUserDocs = () =>
     emailVerified: true
   }));
 
+const createAdminDoc = () => ({
+  name: "Admin 01",
+  email: "admin@spacenow.seed",
+  username: "admin_seed_1",
+  mobile: "9999900001",
+  city: "Bengaluru",
+  state: "Karnataka",
+  role: "admin" as const,
+  emailVerified: true
+});
+
 const uploadSeedPhotosToCloudinary = async () => {
   if (!isCloudinaryConfigured) {
     throw new Error(
@@ -177,7 +188,7 @@ async function seedDemoData() {
       User.deleteMany({
         $or: [
           { email: { $regex: "@spacenow\\.seed$", $options: "i" } },
-          { username: { $regex: "^(owner_seed_|user_seed_)", $options: "i" } }
+          { username: { $regex: "^(owner_seed_|user_seed_|admin_seed_)", $options: "i" } }
         ]
       })
     ]);
@@ -190,6 +201,7 @@ async function seedDemoData() {
     const userDocs = await User.insertMany(
       createUserDocs().map((user) => ({ ...user, password: hashedPassword }))
     );
+    const adminDoc = await User.create({ ...createAdminDoc(), password: hashedPassword });
 
     const spacesPayload: Array<Record<string, unknown>> = [];
     const ownerRotation: Array<{ ownerId: Types.ObjectId; count: number }> = ownerDocs.map((owner) => ({
@@ -304,6 +316,8 @@ async function seedDemoData() {
     console.log(`Default login password (seed users): ${PASSWORD}`);
     console.log("Example owner login: owner1@spacenow.seed");
     console.log("Example user login: user1@spacenow.seed");
+    console.log("Example admin login: admin@spacenow.seed");
+    console.log(`Admin role seeded as: ${adminDoc.role}`);
 
     process.exit(0);
   } catch (error) {
