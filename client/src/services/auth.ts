@@ -1,4 +1,10 @@
-const BASE_URL = "http://localhost:5000/api/auth";
+const isLocalBrowser =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+const BASE_URL =
+  (process.env.NEXT_PUBLIC_API_BASE_URL || (isLocalBrowser ? "http://localhost:5000/api" : "/api")) +
+  "/auth";
 
 export interface MyProfile {
   _id?: string;
@@ -60,7 +66,7 @@ async function safeFetch(input: RequestInfo | URL, init?: RequestInit) {
   try {
     return await fetch(input, init);
   } catch {
-    throw new Error("Cannot reach server. Please start backend on port 5000.");
+    throw new Error("Cannot reach server. Please try again.");
   }
 }
 
