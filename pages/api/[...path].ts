@@ -1,14 +1,36 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import app from "../../server/src/app";
-import connectDB from "../../server/src/config/db";
+import path from "path";
+import dotenv from "dotenv";
 
 let isReady = false;
+let appHandler: ((req: NextApiRequest, res: NextApiResponse) => unknown) | null = null;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!isReady) {
-    await connectDB();
-    isReady = true;
-  }
+  try {
+    if (!isReady) {
+      dotenv.config({ path: path.resolve(process.cwd(), "server", ".env") });
 
-  return app(req as any, res as any);
+      const [{ default: connectDB }, { default: app }] = await Promise.all([
+        import("../../server/src/config/db"),
+        import("../../server/src/app")
+      ]);
+
+      await connectDB();
+      appHandler = app as unknown as (req: NextApiRequest, res: NextApiResponse) => unknown;
+      isReady = true;
+    }
+
+    if (!appHandler) {
+      throw new Error("API handler failed to initialize");
+    }
+
+    return appHandler(req, res);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "API bootstrap failed";
+    console.error("[NEXT API HANDLER ERROR]", error);
+    if (!res.headersSent) {
+      return res.status(500).json({ message });
+    }
+    return res.end();
+  }
 }

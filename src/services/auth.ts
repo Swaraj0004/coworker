@@ -1,10 +1,6 @@
-const isLocalBrowser =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+import { API_BASE_URL } from "./baseUrl";
 
-const BASE_URL =
-  (process.env.NEXT_PUBLIC_API_BASE_URL || (isLocalBrowser ? "http://localhost:5000/api" : "/api")) +
-  "/auth";
+const BASE_URL = `${API_BASE_URL}/auth`;
 
 export interface MyProfile {
   _id?: string;
@@ -66,7 +62,7 @@ async function safeFetch(input: RequestInfo | URL, init?: RequestInit) {
   try {
     return await fetch(input, init);
   } catch {
-    throw new Error("Cannot reach server. Please try again.");
+    throw new Error("Cannot reach API. Check deployment env vars or local server.");
   }
 }
 

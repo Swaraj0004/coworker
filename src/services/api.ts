@@ -5,13 +5,7 @@ import type {
   UpdateSpacePayload
 } from "../types/space";
 import type { Booking, OwnerAnalytics, PaymentOrderResponse } from "../types/booking";
-
-const isLocalBrowser =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || (isLocalBrowser ? "http://localhost:5000/api" : "/api");
+import { API_BASE_URL as BASE_URL } from "./baseUrl";
 
 export interface IndiaCityStat {
   city: string;
@@ -79,8 +73,12 @@ async function apiRequest<T>(
     headers
   });
 
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = isJson ? await response.json().catch(() => ({})) : {};
+    const textFallback = !isJson ? await response.text().catch(() => "") : "";
     if (response.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
@@ -89,7 +87,13 @@ async function apiRequest<T>(
       localStorage.removeItem("name");
       localStorage.removeItem("email");
     }
-    throw new Error(errorData.message || "Request failed");
+    throw new Error(
+      errorData.message || textFallback || `Request failed (${response.status})`
+    );
+  }
+
+  if (!isJson) {
+    throw new Error("API returned non-JSON response. Check deployment API route.");
   }
 
   return response.json() as Promise<T>;

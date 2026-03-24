@@ -17,6 +17,10 @@ app.use(
 );
 app.use(express.json());
 
+app.get("/api/health", (_req: Request, res: Response) => {
+  res.json({ ok: true, service: "space-now-api" });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/spaces", spaceRoutes);
 app.use("/api/reviews", reviewRoutes);

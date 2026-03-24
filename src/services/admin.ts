@@ -1,9 +1,4 @@
-const isLocalBrowser =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || (isLocalBrowser ? "http://localhost:5000/api" : "/api");
+import { API_BASE_URL as BASE_URL } from "./baseUrl";
 
 export interface AdminStats {
   totalUsers: number;
@@ -69,8 +64,12 @@ async function adminRequest<T>(path: string, options: RequestInit = {}): Promise
   }
 
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
+    const data = isJson ? await response.json().catch(() => ({})) : {};
+    const textFallback = !isJson ? await response.text().catch(() => "") : "";
     if (response.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
@@ -79,7 +78,11 @@ async function adminRequest<T>(path: string, options: RequestInit = {}): Promise
       localStorage.removeItem("name");
       localStorage.removeItem("email");
     }
-    throw new Error(data.message || "Request failed");
+    throw new Error(data.message || textFallback || `Request failed (${response.status})`);
+  }
+
+  if (!isJson) {
+    throw new Error("API returned non-JSON response. Check deployment API route.");
   }
 
   return response.json() as Promise<T>;

@@ -1,5 +1,5 @@
-import ClientOnlySpa from "../ClientOnlySpa";
+import ClientApp from "../ClientApp";
 
 export default function CatchAllPage() {
-  return <ClientOnlySpa />;
+  return <ClientApp />;
 }

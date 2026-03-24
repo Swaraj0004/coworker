@@ -21,9 +21,9 @@
     "app/**/*.tsx",
     "pages/**/*.ts",
     "pages/**/*.tsx",
-    "client/src/**/*.ts",
-    "client/src/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "server", "client/node_modules"]
+  "exclude": ["node_modules", "server"]
 }

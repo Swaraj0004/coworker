@@ -1,5 +1,5 @@
-import ClientOnlySpa from "./ClientOnlySpa";
+import ClientApp from "./ClientApp";
 
 export default function HomePage() {
-  return <ClientOnlySpa />;
+  return <ClientApp />;
 }
