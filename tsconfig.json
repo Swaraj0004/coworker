@@ -19,8 +19,8 @@
     "next-env.d.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
-    "api/**/*.ts",
-    "api/**/*.tsx",
+    "pages/**/*.ts",
+    "pages/**/*.tsx",
     "client/src/**/*.ts",
     "client/src/**/*.tsx",
     ".next/types/**/*.ts"
