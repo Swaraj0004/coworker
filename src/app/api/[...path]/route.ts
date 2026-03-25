@@ -488,7 +488,15 @@ const handler = async (
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) => {
-  await resolveDb();
+  try {
+    await resolveDb();
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Database connection failed. Check MONGO_URI and MongoDB Atlas network access.";
+    return NextResponse.json({ message }, { status: 500 });
+  }
 
   const { path } = await context.params;
   const segments = (path || []).filter(Boolean);
