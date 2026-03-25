@@ -7,6 +7,14 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     role: "user" | "owner" | "admin";
   };
+  files?: Array<{
+    fieldname: string;
+    originalname: string;
+    encoding: string;
+    mimetype: string;
+    size: number;
+    buffer: Buffer;
+  }>;
 }
 
 export const verifyToken = (

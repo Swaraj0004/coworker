@@ -28,8 +28,8 @@
     ]
   },
   "include": [
-    "app/**/*.ts",
-    "app/**/*.tsx",
+    "src/app/**/*.ts",
+    "src/app/**/*.tsx",
     "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",

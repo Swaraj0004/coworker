@@ -5,6 +5,15 @@ import Space from "../models/Space";
 import User from "../models/User";
 import { loadIndiaRegionsFromCsv } from "../services/indiaGeo.service";
 
+type UploadedPhotoFile = {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+};
+
 const normalizeStringArray = (value: unknown): string[] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
@@ -151,7 +160,7 @@ const geocodeIndianAddress = async (address?: string, city?: string, state?: str
   }
 };
 
-const uploadSingleFile = (file: Express.Multer.File): Promise<string> => {
+const uploadSingleFile = (file: UploadedPhotoFile): Promise<string> => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
@@ -193,7 +202,7 @@ export const uploadSpacePhotos = async (req: AuthenticatedRequest, res: Response
       });
     }
 
-    const files = (req.files as Express.Multer.File[]) || [];
+    const files = (req.files as UploadedPhotoFile[]) || [];
 
     if (!files.length) {
       return res.status(400).json({ message: "Please upload at least one image" });
