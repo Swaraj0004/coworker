@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import App from "../src/App";
-import { ThemeProvider } from "../src/context/ThemeContext";
+import App from "../App";
+import { ThemeProvider } from "../context/ThemeContext";
 
 export default function ClientApp() {
   const [mounted, setMounted] = useState(false);

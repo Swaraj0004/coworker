@@ -4,7 +4,8 @@ This project now runs as a **single pure Next.js app**:
 
 - `app/` -> Next App Router pages + API routes
 - `app/api/[...path]/route.ts` -> backend API router
-- `src/` -> frontend UI + backend modules (`src/backend/*`)
+- `lib/` -> backend modules (config/controllers/models/services/middleware)
+- `components/`, `views/`, `layouts/`, `context/`, `services/`, `utils/`, `types/` -> frontend app code at root
 - `data/Indian Cities Geo Data.csv` -> India geo dataset
 
 No separate Express server process is required.

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import connectDB from "../../../src/backend/config/db";
-import { JWT_SECRET } from "../../../src/backend/config/jwt";
+import connectDB from "../../../lib/config/db";
+import { JWT_SECRET } from "../../../lib/config/jwt";
 import {
   checkUsername,
   getMe,
@@ -14,7 +14,7 @@ import {
   updateMySecurity,
   verifyForgotPasswordOtp,
   verifySignupOtp
-} from "../../../src/backend/controllers/auth.controller";
+} from "../../../lib/controllers/auth.controller";
 import {
   createSpace,
   deleteOwnerSpace,
@@ -27,7 +27,7 @@ import {
   getSpaceById,
   updateOwnerSpace,
   uploadSpacePhotos
-} from "../../../src/backend/controllers/space.controller";
+} from "../../../lib/controllers/space.controller";
 import {
   cancelBooking,
   createBooking,
@@ -35,14 +35,14 @@ import {
   getOwnerAnalytics,
   getOwnerBookings,
   verifyBookingPayment
-} from "../../../src/backend/controllers/booking.controller";
-import { createReview, getReviewsBySpace } from "../../../src/backend/controllers/review.controller";
+} from "../../../lib/controllers/booking.controller";
+import { createReview, getReviewsBySpace } from "../../../lib/controllers/review.controller";
 import {
   createSpaceLead,
   getMyNotifications,
   markNotificationRead,
   respondToLeadNotification
-} from "../../../src/backend/controllers/notification.controller";
+} from "../../../lib/controllers/notification.controller";
 import {
   deleteReviewAsAdmin,
   deleteSpaceAsAdmin,
@@ -52,7 +52,7 @@ import {
   getOwnerVerificationQueue,
   moderateOwnerVerification,
   moderateSpaceVerification
-} from "../../../src/backend/controllers/admin.controller";
+} from "../../../lib/controllers/admin.controller";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

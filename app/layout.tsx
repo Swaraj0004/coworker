@@ -1,8 +1,8 @@
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import "../src/index.css";
-import "../src/styles/theme.css";
+import "../index.css";
+import "../styles/theme.css";
 
 export const metadata = {
   title: "Space Now",
