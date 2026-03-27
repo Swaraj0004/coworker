@@ -488,23 +488,23 @@ const handler = async (
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) => {
-  await resolveDb();
-
-  const { path } = await context.params;
-  const segments = (path || []).filter(Boolean);
-  const resource = segments[0];
-  const rest = segments.slice(1);
-  const query = jsonFromQuery(request);
-
-  if (resource === "health" && request.method.toUpperCase() === "GET") {
-    return NextResponse.json({ ok: true, service: "space-now-api" });
-  }
-
-  if (!resource) {
-    return notFound();
-  }
-
   try {
+    await resolveDb();
+
+    const { path } = await context.params;
+    const segments = (path || []).filter(Boolean);
+    const resource = segments[0];
+    const rest = segments.slice(1);
+    const query = jsonFromQuery(request);
+
+    if (resource === "health" && request.method.toUpperCase() === "GET") {
+      return NextResponse.json({ ok: true, service: "space-now-api" });
+    }
+
+    if (!resource) {
+      return notFound();
+    }
+
     if (resource === "auth") return await handleAuth(request, rest, query);
     if (resource === "spaces") return await handleSpaces(request, rest, query);
     if (resource === "bookings") return await handleBookings(request, rest, query);
